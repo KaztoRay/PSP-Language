@@ -1,0 +1,4 @@
+# GitHub Linguist 설정
+# .pspp 파일을 PSP 언어로 인식하도록 설정
+
+*.pspp linguist-language=PSP

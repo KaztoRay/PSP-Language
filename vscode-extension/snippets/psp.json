@@ -1,0 +1,253 @@
+{
+  "Hello World": {
+    "prefix": "hello",
+    "body": [
+      "# Hello World in PSP",
+      "print(\"Hello, World!\")",
+      "print(\"안녕하세요, PSP 세계!\")"
+    ],
+    "description": "PSP Hello World example"
+  },
+  "Function Definition": {
+    "prefix": "function",
+    "body": [
+      "function ${1:function_name}(${2:parameters}) {",
+      "\t${3:// function body}",
+      "\treturn ${4:result}",
+      "}"
+    ],
+    "description": "Define a function in PSP"
+  },
+  "Port Scanner": {
+    "prefix": "portscan",
+    "body": [
+      "# Port Scanner",
+      "target = \"${1:192.168.1.1}\"",
+      "ports = [${2:80, 443, 22, 21}]",
+      "",
+      "print(\"포트 스캔 시작: ${target}\")",
+      "for port in ports {",
+      "\tif scan_port(target, port) {",
+      "\t\tprintf(\"포트 %d: 열림\", port)",
+      "\t} else {",
+      "\t\tprintf(\"포트 %d: 닫힘\", port)",
+      "\t}",
+      "}"
+    ],
+    "description": "Basic port scanner template"
+  },
+  "Network Scan Range": {
+    "prefix": "scanrange",
+    "body": [
+      "# Network Range Scanner",
+      "target = \"${1:192.168.1.1}\"",
+      "start_port = ${2:1}",
+      "end_port = ${3:1000}",
+      "",
+      "open_ports = scan_range(target, start_port, end_port)",
+      "printf(\"열린 포트: %s\", open_ports)"
+    ],
+    "description": "Scan a range of ports"
+  },
+  "Hash Password": {
+    "prefix": "hash",
+    "body": [
+      "# Password Hashing",
+      "password = \"${1:password123}\"",
+      "",
+      "md5_hash = md5(password)",
+      "sha256_hash = sha256(password)",
+      "",
+      "print(\"MD5: ${md5_hash}\")",
+      "print(\"SHA256: ${sha256_hash}\")"
+    ],
+    "description": "Hash a password with multiple algorithms"
+  },
+  "Create Payload": {
+    "prefix": "payload",
+    "body": [
+      "# Payload Generation",
+      "payload_type = \"${1:reverse_shell}\"",
+      "target_ip = \"${2:192.168.1.100}\"",
+      "",
+      "payload = create_payload(payload_type, target_ip)",
+      "print(\"생성된 페이로드: ${payload}\")"
+    ],
+    "description": "Generate an exploit payload"
+  },
+  "If Statement": {
+    "prefix": "if",
+    "body": [
+      "if ${1:condition} {",
+      "\t${2:// code block}",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If-Else Statement": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition} {",
+      "\t${2:// if block}",
+      "} else {",
+      "\t${3:// else block}",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "for ${1:item} in ${2:collection} {",
+      "\t${3:// loop body}",
+      "}"
+    ],
+    "description": "For loop"
+  },
+  "While Loop": {
+    "prefix": "while",
+    "body": [
+      "while ${1:condition} {",
+      "\t${2:// loop body}",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "Try-Catch": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "\t${1:// risky code}",
+      "} catch ${2:Error} as e {",
+      "\t${3:// error handling}",
+      "\tprint(\"오류: ${e.message}\")",
+      "}"
+    ],
+    "description": "Try-catch block"
+  },
+  "Class Definition": {
+    "prefix": "class",
+    "body": [
+      "class ${1:ClassName} {",
+      "\tconstructor(${2:parameters}) {",
+      "\t\t${3:// constructor body}",
+      "\t}",
+      "\t",
+      "\tfunction ${4:method_name}(${5:parameters}) {",
+      "\t\t${6:// method body}",
+      "\t}",
+      "}"
+    ],
+    "description": "Class definition"
+  },
+  "Web Vulnerability Test": {
+    "prefix": "webtest",
+    "body": [
+      "# Web Vulnerability Test",
+      "target_url = \"${1:http://example.com}\"",
+      "",
+      "# SQL Injection Test",
+      "sql_payloads = [",
+      "\t\"' OR 1=1--\",",
+      "\t\"' UNION SELECT null,null,null--\"",
+      "]",
+      "",
+      "for payload in sql_payloads {",
+      "\tencoded = base64_encode(payload)",
+      "\tprintf(\"SQL 페이로드: %s\", payload)",
+      "\tprintf(\"인코딩: %s\", encoded)",
+      "}"
+    ],
+    "description": "Web vulnerability testing template"
+  },
+  "System Information": {
+    "prefix": "sysinfo",
+    "body": [
+      "# System Information Collection",
+      "print(\"시스템 정보 수집 시작...\")",
+      "",
+      "# 프로세스 열거",
+      "processes = enum_processes()",
+      "printf(\"실행 중인 프로세스: %d개\", len(processes))",
+      "",
+      "# 서비스 열거",
+      "services = enum_services()",
+      "printf(\"서비스: %d개\", len(services))",
+      "",
+      "# 레지스트리 정보",
+      "os_info = registry_read(\"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\", \"ProductName\")",
+      "print(\"운영체제: ${os_info}\")"
+    ],
+    "description": "System information collection template"
+  },
+  "Buffer Overflow": {
+    "prefix": "bufferoverflow",
+    "body": [
+      "# Buffer Overflow Exploit",
+      "target_ip = \"${1:192.168.1.100}\"",
+      "target_port = ${2:9999}",
+      "",
+      "# 패턴 생성",
+      "pattern_size = ${3:1000}",
+      "pattern = buffer_overflow(pattern_size, \"A\")",
+      "",
+      "# 셸코드",
+      "shellcode_x64 = shellcode(\"x64\")",
+      "",
+      "# 익스플로잇 페이로드",
+      "exploit = pattern + shellcode_x64",
+      "",
+      "# 페이로드 전송",
+      "if connect(target_ip, target_port) {",
+      "\tsend(target_ip, target_port, exploit)",
+      "\tprint(\"익스플로잇 전송 완료\")",
+      "}"
+    ],
+    "description": "Buffer overflow exploit template"
+  },
+  "File Operations": {
+    "prefix": "fileops",
+    "body": [
+      "# File Operations",
+      "file_path = \"${1:target_file.txt}\"",
+      "",
+      "# 파일 존재 확인",
+      "if file_exists(file_path) {",
+      "\t# 파일 읽기",
+      "\tcontent = file_read(file_path)",
+      "\tprint(\"파일 내용: ${content}\")",
+      "\t",
+      "\t# 파일 쓰기",
+      "\tnew_content = \"${2:새로운 내용}\"",
+      "\tfile_write(file_path, new_content)",
+      "} else {",
+      "\tprint(\"파일이 존재하지 않습니다.\")",
+      "}"
+    ],
+    "description": "File operations template"
+  },
+  "Main Function": {
+    "prefix": "main",
+    "body": [
+      "#!/usr/bin/env psp",
+      "# -*- coding: utf-8 -*-",
+      "",
+      "/**",
+      " * ${1:프로그램 설명}",
+      " * @author ${2:작성자}",
+      " * @version ${3:1.0}",
+      " */",
+      "",
+      "function main() {",
+      "\t${4:// 메인 로직}",
+      "\tprint(\"PSP 프로그램 시작\")",
+      "}",
+      "",
+      "# 프로그램 시작점",
+      "if __name__ == \"__main__\" {",
+      "\tmain()",
+      "}"
+    ],
+    "description": "Main function template with program structure"
+  }
+}

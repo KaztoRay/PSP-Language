@@ -1,0 +1,9 @@
+cryptography>=3.4.8
+requests>=2.25.1
+socket
+hashlib
+base64
+struct
+threading
+subprocess
+concurrent.futures

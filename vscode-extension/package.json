@@ -1,0 +1,156 @@
+{
+  "name": "psp-language-support",
+  "displayName": "PSP (PowerShellPlus) Language Support",
+  "description": "Language support for PSP (PowerShellPlus) - A programming language for white hat hackers",
+  "version": "1.0.0",
+  "publisher": "psp-team",
+  "author": {
+    "name": "PSP Development Team",
+    "email": "dev@psp-lang.org"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psp-team/PSP-Language.git"
+  },
+  "bugs": {
+    "url": "https://github.com/psp-team/PSP-Language/issues"
+  },
+  "homepage": "https://github.com/psp-team/PSP-Language",
+  "keywords": [
+    "psp",
+    "powershellplus",
+    "hacking",
+    "pentesting",
+    "security",
+    "white-hat",
+    "programming-language",
+    "cyber-security"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Syntax Highlighting"
+  ],
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:psp"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "psp",
+        "aliases": [
+          "PSP",
+          "PowerShellPlus",
+          "psp"
+        ],
+        "extensions": [
+          ".pspp"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/psp-light.svg",
+          "dark": "./icons/psp-dark.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "psp",
+        "scopeName": "source.psp",
+        "path": "./syntaxes/psp.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "PSP Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/psp-dark.json"
+      },
+      {
+        "label": "PSP Light",
+        "uiTheme": "vs",
+        "path": "./themes/psp-light.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "psp",
+        "path": "./snippets/psp.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "psp.runFile",
+        "title": "Run PSP File",
+        "category": "PSP"
+      },
+      {
+        "command": "psp.runInteractive",
+        "title": "Start PSP Interactive Mode",
+        "category": "PSP"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "psp.runFile",
+        "key": "f5",
+        "when": "editorTextFocus && resourceExtname == .pspp"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .pspp",
+          "command": "psp.runFile",
+          "group": "1_run"
+        }
+      ],
+      "editor/title/run": [
+        {
+          "when": "resourceExtname == .pspp",
+          "command": "psp.runFile"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PSP Language",
+      "properties": {
+        "psp.interpreterPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Path to Python interpreter for running PSP files"
+        },
+        "psp.scriptPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to PSP interpreter script (psp_interpreter.py)"
+        },
+        "psp.enableLinting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable PSP linting"
+        },
+        "psp.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode for PSP execution"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "@types/node": "14.x",
+    "typescript": "^4.4.4"
+  },
+  "icon": "icons/psp-icon.png"
+}

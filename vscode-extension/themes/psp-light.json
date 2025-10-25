@@ -1,0 +1,138 @@
+{
+  "name": "PSP Light",
+  "type": "light",
+  "colors": {
+    "editor.background": "#ffffff",
+    "editor.foreground": "#000000",
+    "editorLineNumber.foreground": "#237893",
+    "editor.selectionBackground": "#add6ff",
+    "editor.inactiveSelectionBackground": "#e5ebf1",
+    "editorWhitespace.foreground": "#b3b3b3cc",
+    "editorIndentGuide.background": "#d3d3d3",
+    "editorIndentGuide.activeBackground": "#939393"
+  },
+  "tokenColors": [
+    {
+      "name": "Comment",
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "fontStyle": "italic",
+        "foreground": "#008000"
+      }
+    },
+    {
+      "name": "String",
+      "scope": "string",
+      "settings": {
+        "foreground": "#a31515"
+      }
+    },
+    {
+      "name": "Number",
+      "scope": "constant.numeric",
+      "settings": {
+        "foreground": "#098658"
+      }
+    },
+    {
+      "name": "Keyword",
+      "scope": [
+        "keyword.control",
+        "storage.type",
+        "storage.modifier"
+      ],
+      "settings": {
+        "foreground": "#0000ff"
+      }
+    },
+    {
+      "name": "Function name",
+      "scope": [
+        "entity.name.function",
+        "support.function"
+      ],
+      "settings": {
+        "foreground": "#795e26"
+      }
+    },
+    {
+      "name": "PSP Network Functions",
+      "scope": "support.function.network.psp",
+      "settings": {
+        "foreground": "#d73a49",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "PSP Crypto Functions",
+      "scope": "support.function.crypto.psp",
+      "settings": {
+        "foreground": "#005cc5",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "PSP Exploit Functions",
+      "scope": "support.function.exploit.psp",
+      "settings": {
+        "foreground": "#e36209",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "PSP System Functions",
+      "scope": "support.function.system.psp",
+      "settings": {
+        "foreground": "#6f42c1",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "PSP Web Functions",
+      "scope": "support.function.web.psp",
+      "settings": {
+        "foreground": "#28a745",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Variable",
+      "scope": "variable",
+      "settings": {
+        "foreground": "#001080"
+      }
+    },
+    {
+      "name": "Constant",
+      "scope": "constant.language",
+      "settings": {
+        "foreground": "#0000ff"
+      }
+    },
+    {
+      "name": "Operator",
+      "scope": "keyword.operator",
+      "settings": {
+        "foreground": "#000000"
+      }
+    },
+    {
+      "name": "Class name",
+      "scope": "entity.name.class",
+      "settings": {
+        "foreground": "#267f99"
+      }
+    },
+    {
+      "name": "Documentation",
+      "scope": "keyword.other.documentation",
+      "settings": {
+        "foreground": "#008000",
+        "fontStyle": "italic"
+      }
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+#!/usr/bin/env psp
+# -*- coding: utf-8 -*-
+
+/**
+ * Hello World in PSP (PowerShellPlus)
+ * 첫 번째 PSP 프로그램
+ * @author PSP Developer
+ * @version 1.0
+ */
+
+# 기본 출력
+print("Hello, World!")
+print("안녕하세요, PSP 세계!")
+
+# 변수 사용
+language_name = "PSP (PowerShellPlus)"
+version = "1.0"
+purpose = "화이트해커를 위한 프로그래밍 언어"
+
+# 포맷 출력
+printf("언어: %s", language_name)
+printf("버전: %s", version)
+printf("목적: %s", purpose)
+
+# 문자열 보간
+greeting = "안녕하세요, ${language_name} v${version}에 오신 것을 환영합니다!"
+print(greeting)
+
+# 배열과 반복문
+features = [
+    "네트워크 스캔",
+    "암호화/해싱", 
+    "익스플로잇 개발",
+    "시스템 정보 수집",
+    "웹 취약점 테스트"
+]
+
+print("\nPSP의 주요 기능들:")
+for i, feature in enumerate(features) {
+    printf("%d. %s", i + 1, feature)
+}
+
+# 조건문
+is_hacker = true
+if is_hacker {
+    print("\n해커 모드 활성화! 🔐")
+    print("보안 테스팅을 시작할 수 있습니다.")
+} else {
+    print("일반 모드입니다.")
+}
+
+# 함수 정의 (기본 예제)
+function welcome_message(name) {
+    return "환영합니다, ${name}님! PSP로 보안 테스팅을 시작해보세요."
+}
+
+user_name = "화이트해커"
+message = welcome_message(user_name)
+print("\n" + message)
+
+# 간단한 해시 예제
+password = "hello_psp"
+hash_value = sha256(password)
+print("\n패스워드 해시 예제:")
+printf("원본: %s", password)
+printf("SHA256: %s", hash_value)
+
+# 로그 출력
+log("Hello World 프로그램 실행 완료", "SUCCESS")
+print("\nPSP 프로그래밍을 즐겨보세요! 🚀")

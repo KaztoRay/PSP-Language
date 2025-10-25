@@ -1,0 +1,15 @@
+type: programming
+color: "#FF6B35"
+extensions:
+  - ".pspp"
+tm_scope: source.psp
+ace_mode: text
+language_id: 998877665
+aliases:
+  - "psp"
+  - "powershellplus"
+  - "powerShellPlus"
+filenames:
+  - "*.pspp"
+interpreters:
+  - "psp"
