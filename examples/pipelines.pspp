@@ -1,0 +1,179 @@
+# PSP 파이프라인 예제
+# PowerShell 스타일 객체 파이프라인 사용법
+
+Write-Output "=== PSP 파이프라인 예제 ==="
+
+# 1. 기본 파이프라인
+Write-Output "`n1. 기본 파이프라인"
+
+# 숫자 배열 생성 및 파이프라인 처리
+$numbers = @(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+Write-Output "원본 배열: $($numbers -join ', ')"
+
+# 짝수만 필터링
+$evenNumbers = $numbers | Where-Object { $_ % 2 -eq 0 }
+Write-Output "짝수만: $($evenNumbers -join ', ')"
+
+# 제곱 계산
+$squares = $numbers | ForEach-Object { $_ * $_ }
+Write-Output "제곱값: $($squares -join ', ')"
+
+# 조건부 필터링 후 변환
+$result = $numbers | Where-Object { $_ -gt 5 } | ForEach-Object { "숫자: $_" }
+Write-Output "5보다 큰 수들: $($result -join ', ')"
+
+# 2. 복합 객체 파이프라인
+Write-Output "`n2. 복합 객체 파이프라인"
+
+# 사용자 데이터 생성
+$users = @(
+    @{Name="김철수"; Age=25; Department="IT"; Salary=3000},
+    @{Name="이영희"; Age=30; Department="HR"; Salary=3500},
+    @{Name="박민수"; Age=28; Department="IT"; Salary=3200},
+    @{Name="정수연"; Age=26; Department="Finance"; Salary=2800},
+    @{Name="최동현"; Age=32; Department="IT"; Salary=4000}
+)
+
+# PSCustomObject로 변환
+$employees = $users | ForEach-Object {
+    [PSCustomObject]@{
+        Name = $_.Name
+        Age = $_.Age
+        Department = $_.Department
+        Salary = $_.Salary
+    }
+}
+
+Write-Output "전체 직원 목록:"
+$employees | ForEach-Object { 
+    Write-Output "  $($_.Name) - $($_.Department) - $($_.Salary)만원" 
+}
+
+# IT 부서 직원만 필터링
+Write-Output "`nIT 부서 직원:"
+$itEmployees = $employees | Where-Object { $_.Department -eq "IT" }
+$itEmployees | ForEach-Object { 
+    Write-Output "  $($_.Name) (나이: $($_.Age), 급여: $($_.Salary)만원)" 
+}
+
+# 급여 기준 정렬
+Write-Output "`n급여 순 정렬 (높은 순):"
+$employees | Sort-Object Salary -Descending | ForEach-Object {
+    Write-Output "  $($_.Name): $($_.Salary)만원"
+}
+
+# 부서별 그룹화
+Write-Output "`n부서별 직원 수:"
+$groupedByDept = $employees | Group-Object Department
+$groupedByDept | ForEach-Object {
+    Write-Output "  $($_.Name): $($_.Count)명"
+}
+
+# 3. 통계 및 집계
+Write-Output "`n3. 통계 및 집계"
+
+# 급여 통계
+$salaryStats = $employees | Measure-Object Salary -Average -Maximum -Minimum -Sum
+Write-Output "급여 통계:"
+Write-Output "  평균: $([Math]::Round($salaryStats.Average, 0))만원"
+Write-Output "  최고: $($salaryStats.Maximum)만원"
+Write-Output "  최저: $($salaryStats.Minimum)만원"
+Write-Output "  총합: $($salaryStats.Sum)만원"
+
+# 연령대별 분류
+Write-Output "`n연령대별 분류:"
+$employees | ForEach-Object {
+    $ageGroup = if ($_.Age -lt 28) { "20대 초반" } 
+                elseif ($_.Age -lt 30) { "20대 후반" } 
+                else { "30대" }
+    
+    [PSCustomObject]@{
+        Name = $_.Name
+        AgeGroup = $ageGroup
+        Department = $_.Department
+    }
+} | Group-Object AgeGroup | ForEach-Object {
+    Write-Output "  $($_.Name): $($_.Count)명"
+}
+
+# 4. 파일 시뮬레이션 파이프라인
+Write-Output "`n4. 파일 데이터 파이프라인"
+
+# 가상 파일 데이터
+$files = @(
+    @{Name="document.pdf"; Size=1024; Type="PDF"; Modified="2023-10-01"},
+    @{Name="image.jpg"; Size=2048; Type="Image"; Modified="2023-10-15"},
+    @{Name="script.pspp"; Size=512; Type="Script"; Modified="2023-10-20"},
+    @{Name="data.csv"; Size=4096; Type="Data"; Modified="2023-10-25"},
+    @{Name="backup.zip"; Size=8192; Type="Archive"; Modified="2023-10-30"}
+)
+
+$fileObjects = $files | ForEach-Object {
+    [PSCustomObject]@{
+        Name = $_.Name
+        Size = $_.Size
+        Type = $_.Type
+        Modified = [DateTime]$_.Modified
+        SizeKB = [Math]::Round($_.Size / 1024, 2)
+    }
+}
+
+Write-Output "파일 목록 (크기 순):"
+$fileObjects | Sort-Object Size -Descending | ForEach-Object {
+    Write-Output "  $($_.Name) - $($_.SizeKB) KB - $($_.Type)"
+}
+
+# 최근 파일만 필터링
+$recentFiles = $fileObjects | Where-Object { $_.Modified -gt (Get-Date "2023-10-20") }
+Write-Output "`n최근 파일 (2023-10-20 이후):"
+$recentFiles | ForEach-Object {
+    Write-Output "  $($_.Name) - $($_.Modified.ToString('yyyy-MM-dd'))"
+}
+
+# 5. 문자열 파이프라인
+Write-Output "`n5. 문자열 처리 파이프라인"
+
+$text = "PSP는 보안 테스트를 위한 강력한 프로그래밍 언어입니다"
+
+# 단어 분석
+$words = $text -split ' '
+Write-Output "원본 텍스트: $text"
+Write-Output "단어 수: $($words.Length)"
+Write-Output "긴 단어들 (3글자 이상):"
+
+$words | Where-Object { $_.Length -gt 3 } | ForEach-Object {
+    Write-Output "  '$_' ($($_.Length)글자)"
+}
+
+# 6. 복합 파이프라인 연산
+Write-Output "`n6. 복합 파이프라인 연산"
+
+# 네트워크 포트 시뮬레이션
+$commonPorts = @(21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995, 3389)
+$services = @{
+    21="FTP"; 22="SSH"; 23="Telnet"; 25="SMTP"; 53="DNS"
+    80="HTTP"; 110="POP3"; 143="IMAP"; 443="HTTPS"
+    993="IMAPS"; 995="POP3S"; 3389="RDP"
+}
+
+Write-Output "보안 포트 분석:"
+$commonPorts | ForEach-Object {
+    $port = $_
+    $serviceName = $services[$port]
+    $isSecure = ($port -eq 22 -or $port -eq 443 -or $port -eq 993 -or $port -eq 995)
+    
+    [PSCustomObject]@{
+        Port = $port
+        Service = $serviceName
+        IsSecure = $isSecure
+        Category = if ($isSecure) { "보안" } else { "비보안" }
+    }
+} | Group-Object Category | ForEach-Object {
+    Write-Output "`n$($_.Name) 서비스:"
+    $_.Group | Sort-Object Port | ForEach-Object {
+        Write-Output "  포트 $($_.Port): $($_.Service)"
+    }
+}
+
+Write-Output "`n=== 파이프라인 예제 완료 ==="

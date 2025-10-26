@@ -1,0 +1,120 @@
+# PSP 기본 문법 예제
+# 변수, 타입, 제어구조 등 기본 문법 학습
+
+Write-Output "=== PSP 기본 문법 예제 ==="
+
+# 1. 변수와 타입
+Write-Output "`n1. 변수 선언과 타입"
+
+# 기본 타입들
+String $name = "홍길동"
+Int32 $age = 25
+Int64 $bigNumber = 9223372036854775807
+Double $height = 175.5
+Boolean $isAdult = $true
+Byte $grade = 85
+
+Write-Output "이름: $name (타입: String)"
+Write-Output "나이: $age (타입: Int32)"
+Write-Output "큰 수: $bigNumber (타입: Int64)"
+Write-Output "키: $height (타입: Double)"
+Write-Output "성인 여부: $isAdult (타입: Boolean)"
+Write-Output "성적: $grade (타입: Byte)"
+
+# 2. 배열
+Write-Output "`n2. 배열 사용법"
+
+Array[Int32] $numbers = @(1, 2, 3, 4, 5)
+Array[String] $colors = @("빨강", "녹색", "파랑")
+
+Write-Output "숫자 배열: $($numbers -join ', ')"
+Write-Output "색상 배열: $($colors -join ', ')"
+Write-Output "첫 번째 숫자: $($numbers[0])"
+Write-Output "마지막 색상: $($colors[-1])"
+
+# 3. 해시테이블
+Write-Output "`n3. 해시테이블 사용법"
+
+Hashtable $person = @{
+    Name = "김철수"
+    Age = 30
+    City = "서울"
+    Skills = @("PSP", "PowerShell", "Python")
+}
+
+Write-Output "이름: $($person.Name)"
+Write-Output "나이: $($person.Age)"
+Write-Output "도시: $($person.City)"
+Write-Output "기술: $($person.Skills -join ', ')"
+
+# 4. 조건문
+Write-Output "`n4. 조건문 (if-elseif-else)"
+
+$score = 85
+
+if ($score -ge 90) {
+    Write-Host "A 등급" -ForegroundColor Green
+} elseif ($score -ge 80) {
+    Write-Host "B 등급" -ForegroundColor Yellow
+} elseif ($score -ge 70) {
+    Write-Host "C 등급" -ForegroundColor Orange
+} else {
+    Write-Host "D 등급" -ForegroundColor Red
+}
+
+# 5. 반복문
+Write-Output "`n5. 반복문"
+
+# for 루프
+Write-Output "for 루프 (1-5 출력):"
+for ($i = 1; $i -le 5; $i++) {
+    Write-Output "  숫자: $i"
+}
+
+# foreach 루프
+Write-Output "foreach 루프 (색상 출력):"
+foreach ($color in $colors) {
+    Write-Output "  색상: $color"
+}
+
+# while 루프
+Write-Output "while 루프 (카운트다운):"
+$count = 3
+while ($count -gt 0) {
+    Write-Output "  $count..."
+    $count--
+}
+Write-Output "  완료!"
+
+# 6. 문자열 처리
+Write-Output "`n6. 문자열 처리"
+
+$text = "PSP 프로그래밍 언어"
+Write-Output "원본 텍스트: $text"
+Write-Output "대문자: $($text.ToUpper())"
+Write-Output "소문자: $($text.ToLower())"
+Write-Output "길이: $($text.Length)"
+Write-Output "포함 확인 ('PSP' 포함?): $($text.Contains('PSP'))"
+
+# 7. 수학 연산
+Write-Output "`n7. 수학 연산"
+
+$a = 10
+$b = 3
+
+Write-Output "$a + $b = $($a + $b)"
+Write-Output "$a - $b = $($a - $b)"
+Write-Output "$a * $b = $($a * $b)"
+Write-Output "$a / $b = $($a / $b)"
+Write-Output "$a % $b = $($a % $b)"
+
+# 8. 비교 연산자
+Write-Output "`n8. 비교 연산자"
+
+Write-Output "10 -eq 10: $(10 -eq 10)"
+Write-Output "10 -ne 5: $(10 -ne 5)"
+Write-Output "10 -gt 5: $(10 -gt 5)"
+Write-Output "10 -lt 15: $(10 -lt 15)"
+Write-Output "'hello' -like '*llo': $('hello' -like '*llo')"
+
+Write-Output "`n=== 기본 문법 예제 완료 ==="

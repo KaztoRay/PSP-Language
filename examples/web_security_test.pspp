@@ -1,0 +1,277 @@
+# PSP 웹 애플리케이션 보안 테스트 예제
+# PowerShell + C언어 + Python 하이브리드 문법
+
+Write-Host "🌐 PSP 웹 애플리케이션 보안 테스트" -ForegroundColor Cyan
+
+# C언어 스타일 구조체 정의
+struct WebTarget {
+    string $Url;
+    string $Method;
+    hashtable $Headers;
+    hashtable $Parameters;
+}
+
+# 대상 웹 애플리케이션 설정
+string $baseUrl = "http://testphp.vulnweb.com"
+array $testUrls = @(
+    "$baseUrl/artists.php",
+    "$baseUrl/search.php", 
+    "$baseUrl/login.php",
+    "$baseUrl/comment.php"
+)
+
+Write-Output "대상 웹 애플리케이션: $baseUrl"
+Write-Output "테스트 URL 수: $($testUrls.Count)"
+
+# 1. 기본 웹 서버 정보 수집
+Write-Host "`n1. 웹 서버 정보 수집" -ForegroundColor Yellow
+
+hashtable $serverInfo = Test-NetConnection $baseUrl.Replace("http://", "").Replace("https://", "") -Port 80
+
+if ($serverInfo.TcpTestSucceeded) {
+    Write-Host "✓ 웹 서버 연결 성공" -ForegroundColor Green
+    
+    # HTTP 헤더 분석 시뮬레이션
+    hashtable $headers = @{
+        Server = "Apache/2.2.22"
+        "X-Powered-By" = "PHP/5.3.10"
+        "Content-Type" = "text/html"
+    }
+    
+    Write-Output "서버 정보:"
+    $headers.GetEnumerator() | ForEach-Object {
+        Write-Output "  $($_.Key): $($_.Value)"
+    }
+} else {
+    Write-Host "✗ 웹 서버 연결 실패" -ForegroundColor Red
+}
+
+# 2. 디렉토리 및 파일 열거
+Write-Host "`n2. 디렉토리 및 파일 탐색" -ForegroundColor Yellow
+
+array $commonDirs = @("admin", "backup", "config", "test", "tmp", "uploads", "images", "css", "js")
+array $foundDirs = @()
+
+Write-Output "일반적인 디렉토리 확인 중..."
+
+$commonDirs | ForEach-Object {
+    string $dir = $_
+    string $testUrl = "$baseUrl/$dir"
+    
+    # HTTP 상태 코드 시뮬레이션
+    int $statusCode = Get-Random -Minimum 200 -Maximum 500
+    
+    if ($statusCode -eq 200 -or $statusCode -eq 403) {
+        $foundDirs += $dir
+        string $status = if ($statusCode -eq 200) { "접근 가능" } else { "접근 금지" }
+        Write-Host "  ✓ /$dir - $status (HTTP $statusCode)" -ForegroundColor Green
+    }
+}
+
+Write-Output "발견된 디렉토리: $($foundDirs.Count)개"
+
+# 3. SQL 인젝션 테스트
+Write-Host "`n3. SQL 인젝션 취약점 테스트" -ForegroundColor Yellow
+
+array $sqlPayloads = @(
+    "'",
+    "' OR '1'='1",
+    "' OR 1=1 --",
+    "'; DROP TABLE users; --",
+    "' UNION SELECT NULL, username, password FROM users --"
+)
+
+array $vulnerableUrls = @()
+
+$testUrls | ForEach-Object {
+    string $url = $_
+    Write-Output "테스트 중: $url"
+    
+    $sqlPayloads | ForEach-Object {
+        string $payload = $_
+        
+        # SQL 인젝션 테스트 실행
+        hashtable $result = Test-SQLInjection -Url $url -Parameter "id" -Payload $payload
+        
+        if ($result.Vulnerable) {
+            $vulnerableUrls += @{
+                Url = $url
+                Parameter = "id"
+                Payload = $payload
+                Response = $result.Response
+            }
+            Write-Host "  ⚠️  SQL 인젝션 취약점 발견!" -ForegroundColor Red
+            Write-Output "     페이로드: $payload"
+        }
+    }
+}
+
+if ($vulnerableUrls.Count -eq 0) {
+    Write-Host "  ✓ SQL 인젝션 취약점 없음" -ForegroundColor Green
+}
+
+# 4. XSS (Cross-Site Scripting) 테스트
+Write-Host "`n4. XSS 취약점 테스트" -ForegroundColor Yellow
+
+array $xssPayloads = @(
+    "<script>alert('XSS')</script>",
+    "<img src=x onerror=alert('XSS')>",
+    "javascript:alert('XSS')",
+    "<svg onload=alert('XSS')>",
+    "'><script>alert('XSS')</script>"
+)
+
+array $xssVulnerable = @()
+
+Write-Output "XSS 페이로드 테스트 중..."
+
+$testUrls | ForEach-Object {
+    string $url = $_
+    
+    $xssPayloads | ForEach-Object {
+        string $payload = $_
+        
+        # XSS 테스트 시뮬레이션
+        bool $isVulnerable = (Get-Random -Minimum 0 -Maximum 10) -lt 3  # 30% 확률
+        
+        if ($isVulnerable) {
+            $xssVulnerable += @{
+                Url = $url
+                Payload = $payload
+                Type = "Reflected XSS"
+            }
+            Write-Host "  ⚠️  XSS 취약점 발견: $url" -ForegroundColor Red
+            Write-Output "     페이로드: $payload"
+        }
+    }
+}
+
+if ($xssVulnerable.Count -eq 0) {
+    Write-Host "  ✓ XSS 취약점 없음" -ForegroundColor Green
+}
+
+# 5. 인증 우회 테스트
+Write-Host "`n5. 인증 우회 테스트" -ForegroundColor Yellow
+
+array $authBypassPayloads = @(
+    "admin' --",
+    "admin' #",
+    "admin'/*",
+    "' or 1=1#",
+    "' or 1=1--"
+)
+
+string $loginUrl = "$baseUrl/login.php"
+Write-Output "로그인 페이지 테스트: $loginUrl"
+
+$authBypassPayloads | ForEach-Object {
+    string $payload = $_
+    Write-Output "인증 우회 시도: username=$payload, password=test"
+    
+    # 인증 우회 시뮬레이션
+    bool $bypassed = (Get-Random -Minimum 0 -Maximum 10) -lt 2  # 20% 확률
+    
+    if ($bypassed) {
+        Write-Host "  ⚠️  인증 우회 성공!" -ForegroundColor Red
+        Write-Output "     페이로드: $payload"
+    }
+}
+
+# 6. 파일 업로드 취약점 테스트
+Write-Host "`n6. 파일 업로드 취약점 테스트" -ForegroundColor Yellow
+
+array $maliciousFiles = @(
+    "shell.php",
+    "backdoor.jsp", 
+    "webshell.aspx",
+    "reverse.exe"
+)
+
+Write-Output "악성 파일 업로드 테스트..."
+
+$maliciousFiles | ForEach-Object {
+    string $filename = $_
+    Write-Output "파일 업로드 시도: $filename"
+    
+    # 업로드 테스트 시뮬레이션
+    bool $uploaded = (Get-Random -Minimum 0 -Maximum 10) -lt 1  # 10% 확률
+    
+    if ($uploaded) {
+        Write-Host "  ⚠️  악성 파일 업로드 성공: $filename" -ForegroundColor Red
+    } else {
+        Write-Host "  ✓ 파일 업로드 차단됨: $filename" -ForegroundColor Green
+    }
+}
+
+# 7. 보안 헤더 검사
+Write-Host "`n7. 보안 헤더 검사" -ForegroundColor Yellow
+
+hashtable $securityHeaders = @{
+    "X-Frame-Options" = $false
+    "X-XSS-Protection" = $false
+    "X-Content-Type-Options" = $false
+    "Strict-Transport-Security" = $false
+    "Content-Security-Policy" = $false
+}
+
+Write-Output "보안 헤더 확인 중..."
+
+$securityHeaders.GetEnumerator() | ForEach-Object {
+    string $header = $_.Key
+    bool $present = $_.Value
+    
+    if ($present) {
+        Write-Host "  ✓ $header: 설정됨" -ForegroundColor Green
+    } else {
+        Write-Host "  ✗ $header: 누락" -ForegroundColor Red
+    }
+}
+
+# 8. 종합 보고서 생성
+Write-Host "`n8. 보안 테스트 보고서" -ForegroundColor Yellow
+
+hashtable $finalReport = @{
+    Target = $baseUrl
+    TestTime = Get-Date
+    TestedUrls = $testUrls.Count
+    SQLInjections = $vulnerableUrls.Count
+    XSSVulnerabilities = $xssVulnerable.Count
+    SecurityScore = 0
+}
+
+# 보안 점수 계산
+int $maxScore = 100
+int $deductions = 0
+
+$deductions += $vulnerableUrls.Count * 20      # SQL 인젝션 -20점
+$deductions += $xssVulnerable.Count * 15       # XSS -15점
+$deductions += ($securityHeaders.Values | Where-Object { $_ -eq $false }).Count * 5  # 보안헤더 -5점
+
+$finalReport.SecurityScore = [Math]::Max(0, $maxScore - $deductions)
+
+Write-Output "`n=== 웹 애플리케이션 보안 테스트 보고서 ==="
+Write-Output "대상: $($finalReport.Target)"
+Write-Output "테스트 시간: $($finalReport.TestTime)"
+Write-Output "테스트된 URL: $($finalReport.TestedUrls)개"
+Write-Output ""
+
+Write-Output "발견된 취약점:"
+Write-Host "  SQL 인젝션: $($finalReport.SQLInjections)건" -ForegroundColor $(if ($finalReport.SQLInjections -gt 0) { "Red" } else { "Green" })
+Write-Host "  XSS: $($finalReport.XSSVulnerabilities)건" -ForegroundColor $(if ($finalReport.XSSVulnerabilities -gt 0) { "Red" } else { "Green" })
+
+Write-Output ""
+string $scoreColor = if ($finalReport.SecurityScore -ge 80) { "Green" } elseif ($finalReport.SecurityScore -ge 60) { "Yellow" } else { "Red" }
+Write-Host "보안 점수: $($finalReport.SecurityScore)/100" -ForegroundColor $scoreColor
+
+Write-Output "`n권장사항:"
+if ($vulnerableUrls.Count -gt 0) {
+    Write-Output "  • SQL 인젝션 방지를 위한 파라미터화된 쿼리 사용"
+}
+if ($xssVulnerable.Count -gt 0) {
+    Write-Output "  • XSS 방지를 위한 입력 검증 및 출력 인코딩"
+}
+Write-Output "  • 보안 헤더 설정 (X-Frame-Options, CSP 등)"
+Write-Output "  • 정기적인 보안 테스트 수행"
+Write-Output "  • 웹 애플리케이션 방화벽(WAF) 도입 검토"
+
+Write-Host "`n✅ PSP 웹 애플리케이션 보안 테스트 완료" -ForegroundColor Green

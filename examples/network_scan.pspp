@@ -1,58 +1,97 @@
-# 네트워크 스캔 예제
-print("포트 스캔 시작...")
+# PowerShell-Style Network Security Scanner
+# PSP (PowerShell Plus) Language Example
 
-target = "127.0.0.1"
-start_port = 80
-end_port = 443
+# 변수 선언 (PowerShell style with C-style typing)
+String $target = "127.0.0.1"
+Int32 $startPort = 80
+Int32 $endPort = 443
 
-# 포트 범위 스캔
-open_ports = scan_range(target, start_port, end_port)
-printf("열린 포트: %s", open_ports)
+# PowerShell-style cmdlet 사용
+Write-Output "네트워크 보안 스캔 시작..."
+Write-Host "대상: $target" -ForegroundColor Green
 
-# 개별 포트 확인
-if scan_port(target, 22) {
-    print("SSH 포트가 열려있습니다!")
+# 포트 스캔 범위 (PowerShell cmdlet style)
+Array[Int32] $openPorts = Invoke-PortScan -Target $target -StartPort $startPort -EndPort $endPort
+Write-Output "발견된 열린 포트: $($openPorts | Join-String ', ')"
+
+# 개별 포트 확인 (C-style control structure)
+if (Test-Port -Target $target -Port 22) {
+    Write-Warning "SSH 포트(22)가 열려있습니다!"
+} else {
+    Write-Output "SSH 포트가 닫혀있습니다."
 }
 
 # 서비스 배너 그래빙
-banner = recv(target, 80, 1024)
-print("웹 서버 배너:", banner)
-
-# 페이로드 생성 및 전송
-payload = create_payload("reverse_shell", "192.168.1.100")
-print("생성된 페이로드:", payload)
-
-# 해시 계산
-password = "admin123"
-md5_hash = md5(password)
-sha256_hash = sha256(password)
-
-print("MD5:", md5_hash)
-print("SHA256:", sha256_hash)
-
-# Base64 인코딩
-encoded = base64_encode("hello world")
-decoded = base64_decode(encoded)
-print("인코딩:", encoded)
-print("디코딩:", decoded)
-
-# 윈도우 시스템 정보 수집
-processes = enum_processes()
-services = enum_services()
-
-print("실행 중인 프로세스 수:", len(processes))
-print("서비스 수:", len(services))
-
-# 파일 시스템 조작
-if file_exists("C:\\Windows\\System32\\cmd.exe") {
-    print("cmd.exe가 존재합니다.")
+String $banner = Get-ServiceBanner -Target $target -Port 80 -Timeout 5
+if ($banner -ne $null) {
+    Write-Output "웹 서버 배너: $banner"
 }
 
-files = dir_list("C:\\Windows\\System32")
-print("System32 파일 수:", len(files))
+# 페이로드 생성 (보안 테스트용)
+Hashtable $payloadConfig = @{
+    Type = "reverse_shell"
+    ListenerIP = "192.168.1.100"
+    ListenerPort = 4444
+}
+String $payload = New-Payload @payloadConfig
+Write-Output "생성된 페이로드 크기: $($payload.Length) bytes"
 
-# 레지스트리 조작
-reg_value = registry_read("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")
-print("Windows 버전:", reg_value)
+# 해시 계산 (PowerShell cmdlet style)
+String $password = "admin123"
+String $md5Hash = Get-Hash -InputString $password -Algorithm MD5
+String $sha256Hash = Get-Hash -InputString $password -Algorithm SHA256
 
-log("스캔 완료", "INFO")
+Write-Output "패스워드 해시 분석:"
+Write-Output "  MD5: $md5Hash"
+Write-Output "  SHA256: $sha256Hash"
+
+# Base64 인코딩/디코딩
+String $plainText = "hello world"
+String $encoded = ConvertTo-Base64 -InputString $plainText
+String $decoded = ConvertFrom-Base64 -EncodedString $encoded
+
+Write-Output "Base64 변환:"
+Write-Output "  원본: $plainText"
+Write-Output "  인코딩: $encoded"
+Write-Output "  디코딩: $decoded"
+
+# 시스템 정보 수집 (PowerShell-style)
+Array[ProcessInfo] $processes = Get-ProcessList
+Array[ServiceInfo] $services = Get-ServiceList
+
+Write-Output "시스템 분석 결과:"
+Write-Output "  실행 중인 프로세스: $($processes.Count)"
+Write-Output "  설치된 서비스: $($services.Count)"
+
+# 파일 시스템 조작 (PowerShell Test-Path style)
+String $cmdPath = "C:\Windows\System32\cmd.exe"
+if (Test-Path -Path $cmdPath) {
+    Write-Output "cmd.exe 발견: $cmdPath"
+    
+    # 파일 정보 수집
+    FileInfo $cmdInfo = Get-ItemProperty -Path $cmdPath
+    Write-Output "  크기: $($cmdInfo.Length) bytes"
+    Write-Output "  생성일: $($cmdInfo.CreationTime)"
+}
+
+# 디렉토리 리스팅
+String $systemPath = "C:\Windows\System32"
+Array[FileInfo] $files = Get-ChildItem -Path $systemPath -Filter "*.exe"
+Write-Output "System32 실행파일 수: $($files.Count)"
+
+# 레지스트리 조작 (PowerShell registry style)
+String $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+String $productName = Get-ItemProperty -Path $regPath -Name "ProductName" | Select-Object -ExpandProperty ProductName
+Write-Output "Windows 버전: $productName"
+
+# 보안 스캔 결과 로깅
+Hashtable $scanResults = @{
+    Target = $target
+    OpenPorts = $openPorts
+    ServicesDetected = $services.Count
+    ScanTime = Get-Date
+    Status = "Completed"
+}
+
+Write-EventLog -LogName "Security" -Source "PSP-Scanner" -EventId 1001 -Message "네트워크 스캔 완료" -EntryType Information
+Write-Output "스캔 완료 - 결과가 로그에 기록되었습니다."

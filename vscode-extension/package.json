@@ -1,7 +1,7 @@
 {
   "name": "psp-language-support",
-  "displayName": "PSP (PowerShellPlus) Language Support",
-  "description": "Language support for PSP (PowerShellPlus) - A programming language for white hat hackers",
+  "displayName": "PSP Language Support",
+  "description": "PSP 언어 지원 - 보안 테스트 전문 프로그래밍 언어",
   "version": "1.0.0",
   "publisher": "psp-team",
   "author": {
@@ -19,13 +19,13 @@
   "homepage": "https://github.com/psp-team/PSP-Language",
   "keywords": [
     "psp",
-    "powershellplus",
-    "hacking",
-    "pentesting",
     "security",
-    "white-hat",
-    "programming-language",
-    "cyber-security"
+    "pentesting",
+    "cybersecurity",
+    "scripting",
+    "automation",
+    "powershell",
+    "programming-language"
   ],
   "categories": [
     "Programming Languages",

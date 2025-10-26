@@ -1,70 +1,103 @@
-#!/usr/bin/env psp
-# -*- coding: utf-8 -*-
-
-/**
- * Hello World in PSP (PowerShellPlus)
- * 첫 번째 PSP 프로그램
- * @author PSP Developer
- * @version 1.0
- */
+# PSP Hello World 예제
+# PSP 언어의 기본 문법 소개
 
 # 기본 출력
-print("Hello, World!")
-print("안녕하세요, PSP 세계!")
+Write-Output "안녕하세요, PSP 언어에 오신 것을 환영합니다!"
+Write-Host "PSP는 보안 테스트 전문 언어입니다." -ForegroundColor Green
 
-# 변수 사용
-language_name = "PSP (PowerShellPlus)"
-version = "1.0"
-purpose = "화이트해커를 위한 프로그래밍 언어"
+# 변수 선언 (타입 명시)
+String $language = "PSP"
+Int32 $version = 1
+Boolean $isSecure = $true
+Double $pi = 3.14159
 
-# 포맷 출력
-printf("언어: %s", language_name)
-printf("버전: %s", version)
-printf("목적: %s", purpose)
+# 변수 출력
+Write-Output "언어: $language"
+Write-Output "버전: $version"
+Write-Output "보안 특화: $isSecure"
+Write-Output "파이 값: $pi"
 
-# 문자열 보간
-greeting = "안녕하세요, ${language_name} v${version}에 오신 것을 환영합니다!"
-print(greeting)
-
-# 배열과 반복문
-features = [
-    "네트워크 스캔",
-    "암호화/해싱", 
-    "익스플로잇 개발",
-    "시스템 정보 수집",
-    "웹 취약점 테스트"
-]
-
-print("\nPSP의 주요 기능들:")
-for i, feature in enumerate(features) {
-    printf("%d. %s", i + 1, feature)
+# PowerShell 스타일 해시테이블
+hashtable $config = @{
+    Name = "PSP Language"
+    Purpose = "화이트햇 해킹"
+    Platform = "Cross-Platform" 
+    License = "MIT"
 }
 
-# 조건문
-is_hacker = true
-if is_hacker {
-    print("\n해커 모드 활성화! 🔐")
-    print("보안 테스팅을 시작할 수 있습니다.")
+# 배열 선언
+Array[String] $features = @("네트워크 스캔", "취약점 테스트", "암호화", "포렌식")
+Write-Output "주요 기능: $($features -join ', ')"
+
+# 해시테이블 (설정)
+Hashtable $config = @{
+    Name = "PSP Language"
+    Purpose = "보안 테스트"
+    Platform = "크로스플랫폼"
+    License = "MIT"
+}
+
+# 해시테이블 출력
+Write-Output "`n언어 정보:"
+foreach ($key in $config.Keys) {
+    Write-Output "  $key : $($config[$key])"
+}
+
+# 조건문 예제
+if ($version -ge 1) {
+    Write-Host "PSP v$version 이 실행 중입니다!" -ForegroundColor Cyan
 } else {
-    print("일반 모드입니다.")
+    Write-Warning "구버전 PSP입니다."
 }
 
-# 함수 정의 (기본 예제)
-function welcome_message(name) {
-    return "환영합니다, ${name}님! PSP로 보안 테스팅을 시작해보세요."
+# 반복문 예제
+Write-Output "`n지원하는 기능들:"
+for ($i = 0; $i -lt $features.Length; $i++) {
+    Write-Output "  $($i + 1). $($features[$i])"
 }
 
-user_name = "화이트해커"
-message = welcome_message(user_name)
-print("\n" + message)
+Write-Output "`nPSP Hello World 예제가 완료되었습니다!"
 
-# 간단한 해시 예제
-password = "hello_psp"
-hash_value = sha256(password)
-print("\n패스워드 해시 예제:")
-printf("원본: %s", password)
-printf("SHA256: %s", hash_value)
+Write-Output "`n주요 기능들:"
+$features | ForEach-Object { Write-Output "- $_" }
 
-# 로그 출력
-log("Hello World 프로그램 실행 완료", "SUCCESS")
-print("\nPSP 프로그래밍을 즐겨보세요! 🚀")
+# 조건문 (C언어 + PowerShell 혼합)
+if ($version -eq 1) {
+    Write-Host "PSP v1.0 - 초기 릴리즈" -ForegroundColor Yellow
+} else {
+    Write-Host "PSP 최신 버전" -ForegroundColor Blue
+}
+
+# 네트워크 테스트 (보안 특화 기능)
+Write-Output "`n네트워크 연결 테스트:"
+string $target = "google.com"
+hashtable $result = Test-NetConnection $target -Port 80
+
+if ($result.TcpTestSucceeded) {
+    Write-Host "✓ $target:80 연결 성공" -ForegroundColor Green
+} else {
+    Write-Host "✗ $target:80 연결 실패" -ForegroundColor Red
+}
+
+# 해시 계산 (보안 기능)
+Write-Output "`n해시 계산 예제:"
+string $password = "Hello123"
+string $md5Hash = ConvertTo-MD5Hash $password
+string $sha256Hash = ConvertTo-SHA256Hash $password
+
+Write-Output "원본: $password"
+Write-Output "MD5: $md5Hash"
+Write-Output "SHA256: $sha256Hash"
+
+# 시스템 정보 수집
+Write-Output "`n시스템 정보:"
+string $currentTime = Get-Date
+Write-Output "현재 시간: $currentTime"
+
+# 프로세스 목록 (상위 5개만)
+Write-Output "`n실행 중인 프로세스 (상위 5개):"
+Get-ProcessList | Select-Object Name, PID | ForEach-Object { 
+    Write-Output "프로세스: $($_.Name) (PID: $($_.PID))" 
+} | Out-Host
+
+Write-Host "`n🎉 PSP Hello World 예제 완료!" -ForegroundColor Magenta

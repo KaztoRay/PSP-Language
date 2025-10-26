@@ -1,14 +1,16 @@
 PSP:
   type: programming
-  color: "#FF6B35"
+  color: "#0078d4"
   extensions:
   - ".pspp"
   tm_scope: source.psp
-  ace_mode: text
+  ace_mode: powershell
   language_id: 998877665
   aliases:
   - psp
-  - powershellplus
-  - powerShellPlus
+  - PSP
   interpreters:
   - psp
+  filenames:
+  - PSPProfile
+  - psp.config

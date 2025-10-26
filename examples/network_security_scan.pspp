@@ -1,0 +1,140 @@
+# PSP 네트워크 보안 스캔 예제
+# PowerShell 기반 보안 테스팅 도구
+
+Write-Host "🔍 PSP 네트워크 보안 스캔 시작" -ForegroundColor Cyan
+
+# C언어 스타일 변수 선언
+string $target = "scanme.nmap.org"
+array $commonPorts = @(21, 22, 23, 25, 53, 80, 110, 443, 993, 995, 3389)
+hashtable $scanConfig = @{
+    Timeout = 3
+    Threads = 10
+    Verbose = $true
+}
+
+Write-Output "대상 호스트: $target"
+Write-Output "스캔 포트: $($commonPorts.Count)개"
+
+# 기본 연결성 테스트
+Write-Host "`n1. 호스트 연결성 테스트" -ForegroundColor Yellow
+hashtable $pingResult = Test-NetConnection $target
+
+if ($pingResult.PingSucceeded) {
+    Write-Host "✓ 호스트 $target 응답 확인" -ForegroundColor Green
+} else {
+    Write-Host "✗ 호스트 $target 응답 없음" -ForegroundColor Red
+}
+
+# 포트 스캔 실행
+Write-Host "`n2. 포트 스캔 실행" -ForegroundColor Yellow
+array $scanResults = Invoke-PortScan $target -Port $commonPorts
+
+Write-Output "스캔 결과:"
+$scanResults | Where-Object { $_.Status -eq "Open" } | ForEach-Object {
+    Write-Host "  ✓ 포트 $($_.Port) ($($_.Service)) - 열림" -ForegroundColor Green
+}
+
+# 열린 포트로 서비스 상세 테스트
+Write-Host "`n3. 서비스 상세 분석" -ForegroundColor Yellow
+
+$scanResults | Where-Object { $_.Status -eq "Open" } | ForEach-Object {
+    string $port = $_.Port
+    string $service = $_.Service
+    
+    Write-Output "포트 $port ($service) 분석 중..."
+    
+    if ($port -eq 80 -or $port -eq 443) {
+        # HTTP/HTTPS 서비스 테스트
+        Write-Output "  웹 서비스 탐지됨"
+        
+        # 웹 취약점 스캔 시뮬레이션
+        string $protocol = if ($port -eq 443) { "https" } else { "http" }
+        string $baseUrl = "${protocol}://${target}:${port}"
+        
+        Write-Output "  기본 웹 스캔: $baseUrl"
+        
+        # SQL 인젝션 테스트
+        hashtable $sqlTest = Test-SQLInjection -Url "$baseUrl/search" -Parameter "q" -Payload "' OR 1=1 --"
+        
+        if ($sqlTest.Vulnerable) {
+            Write-Host "  ⚠️  SQL 인젝션 취약점 발견!" -ForegroundColor Red
+        } else {
+            Write-Host "  ✓ SQL 인젝션 취약점 없음" -ForegroundColor Green
+        }
+    }
+    
+    if ($port -eq 22) {
+        # SSH 서비스 테스트
+        Write-Output "  SSH 서비스 탐지됨"
+        Write-Output "  SSH 버전 및 알고리즘 확인 필요"
+    }
+    
+    if ($port -eq 21) {
+        # FTP 서비스 테스트
+        Write-Output "  FTP 서비스 탐지됨"
+        Write-Output "  익명 로그인 테스트 필요"
+    }
+}
+
+# 시스템 정보 수집
+Write-Host "`n4. 대상 시스템 정보 수집" -ForegroundColor Yellow
+
+# 암호화 테스트
+Write-Host "`n5. 암호화 기능 테스트" -ForegroundColor Yellow
+
+string $testData = "sensitive_data_123"
+string $md5Hash = ConvertTo-MD5Hash $testData
+string $sha256Hash = ConvertTo-SHA256Hash $testData
+
+Write-Output "테스트 데이터: $testData"
+Write-Output "MD5 해시: $md5Hash"
+Write-Output "SHA256 해시: $sha256Hash"
+
+# 해시 크래킹 시뮬레이션
+Write-Output "`n간단한 해시 크래킹 테스트:"
+array $commonPasswords = @("password", "123456", "admin", "test", "hello")
+string $targetHash = ConvertTo-MD5Hash "admin"
+
+Write-Output "대상 해시: $targetHash"
+
+$commonPasswords | ForEach-Object {
+    string $candidate = $_
+    string $candidateHash = ConvertTo-MD5Hash $candidate
+    
+    if ($candidateHash -eq $targetHash) {
+        Write-Host "  ✓ 해시 크래킹 성공: '$candidate'" -ForegroundColor Green
+    }
+}
+
+# 보고서 생성
+Write-Host "`n6. 스캔 보고서 생성" -ForegroundColor Yellow
+
+hashtable $report = @{
+    Target = $target
+    ScanTime = Get-Date
+    OpenPorts = ($scanResults | Where-Object { $_.Status -eq "Open" }).Count
+    TotalPorts = $commonPorts.Count
+    Vulnerabilities = @("SQL Injection 가능성")
+    Recommendations = @(
+        "불필요한 서비스 비활성화"
+        "웹 애플리케이션 입력 검증 강화"
+        "정기적인 보안 업데이트"
+    )
+}
+
+Write-Output "`n=== 스캔 보고서 ==="
+Write-Output "대상: $($report.Target)"
+Write-Output "스캔 시간: $($report.ScanTime)"
+Write-Output "열린 포트: $($report.OpenPorts)/$($report.TotalPorts)"
+
+Write-Output "`n발견된 취약점:"
+$report.Vulnerabilities | ForEach-Object {
+    Write-Host "  ⚠️  $_" -ForegroundColor Red
+}
+
+Write-Output "`n권장사항:"
+$report.Recommendations | ForEach-Object {
+    Write-Output "  • $_"
+}
+
+Write-Host "`n✅ PSP 네트워크 보안 스캔 완료" -ForegroundColor Green

@@ -1,0 +1,24 @@
+# PSP 빌드 테스트 스크립트
+# PowerShell 기반 PSP 언어의 기본 기능 테스트
+
+Write-Output "=== PSP 빌드 테스트 시작 ==="
+
+# 기본 출력 테스트
+Write-Host "기본 출력 테스트 성공!" -ForegroundColor Green
+Write-Warning "경고 메시지 테스트"
+
+# 간단한 변수 테스트
+Write-Output "변수 테스트 완료"
+
+# 네트워크 보안 cmdlet 테스트
+Write-Output "보안 스캔 cmdlet 테스트:"
+Test-NetConnection -ComputerName "127.0.0.1" -Port 80
+
+# 해시 생성 테스트
+ConvertTo-MD5Hash "test123"
+ConvertTo-SHA256Hash "test123"
+
+# 시스템 정보 테스트
+Get-SystemInfo
+
+Write-Output "=== PSP 빌드 테스트 완료 ==="

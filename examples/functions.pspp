@@ -1,0 +1,180 @@
+# PSP 함수와 cmdlet 예제
+# 사용자 정의 함수 및 고급 cmdlet 사용법
+
+Write-Output "=== PSP 함수와 cmdlet 예제 ==="
+
+# 1. 기본 함수 정의
+Write-Output "`n1. 기본 함수"
+
+function Get-Square {
+    param([Int32] $number)
+    return $number * $number
+}
+
+function Get-Greeting {
+    param(
+        [String] $name,
+        [String] $language = "Korean"
+    )
+    
+    if ($language -eq "Korean") {
+        return "안녕하세요, $name 님!"
+    } elseif ($language -eq "English") {
+        return "Hello, $name!"
+    } else {
+        return "Hi, $name!"
+    }
+}
+
+# 함수 사용
+$result = Get-Square -number 5
+Write-Output "5의 제곱: $result"
+
+$greeting1 = Get-Greeting -name "김철수"
+$greeting2 = Get-Greeting -name "John" -language "English"
+Write-Output $greeting1
+Write-Output $greeting2
+
+# 2. 고급 함수 (cmdlet 스타일)
+Write-Output "`n2. 고급 함수 (cmdlet 스타일)"
+
+[CmdletBinding()]
+function Test-NetworkPort {
+    param(
+        [Parameter(Mandatory=$true)]
+        [String] $ComputerName,
+        
+        [Parameter(Mandatory=$true)]
+        [Int32] $Port,
+        
+        [Parameter()]
+        [Int32] $Timeout = 1000,
+        
+        [Parameter()]
+        [Switch] $Verbose
+    )
+    
+    begin {
+        if ($Verbose) {
+            Write-Output "네트워크 포트 테스트 시작..."
+        }
+    }
+    
+    process {
+        try {
+            Write-Output "테스트 중: $ComputerName : $Port"
+            
+            # 실제로는 네트워크 연결을 테스트하지만, 여기서는 시뮬레이션
+            $isOpen = ($Port -eq 80 -or $Port -eq 443)
+            
+            $result = [PSCustomObject]@{
+                ComputerName = $ComputerName
+                Port = $Port
+                Status = if ($isOpen) { "Open" } else { "Closed" }
+                Timestamp = Get-Date
+            }
+            
+            return $result
+        } catch {
+            Write-Error "포트 테스트 실패: $($_.Exception.Message)"
+            return $null
+        }
+    }
+    
+    end {
+        if ($Verbose) {
+            Write-Output "네트워크 포트 테스트 완료"
+        }
+    }
+}
+
+# 고급 함수 사용
+$portResult = Test-NetworkPort -ComputerName "example.com" -Port 80 -Verbose
+Write-Output "결과: $($portResult | ConvertTo-Json)"
+
+# 3. 파이프라인과 함수
+Write-Output "`n3. 파이프라인과 함수"
+
+function Get-ProcessInfo {
+    param([String] $ProcessName)
+    
+    # 모의 프로세스 데이터
+    $processes = @(
+        @{Name="chrome"; CPU=25.5; Memory=512},
+        @{Name="firefox"; CPU=15.2; Memory=384},
+        @{Name="notepad"; CPU=0.1; Memory=12},
+        @{Name="explorer"; CPU=5.8; Memory=128}
+    )
+    
+    foreach ($proc in $processes) {
+        if ($proc.Name -like "*$ProcessName*") {
+            [PSCustomObject]@{
+                Name = $proc.Name
+                CPU = $proc.CPU
+                Memory = $proc.Memory
+            }
+        }
+    }
+}
+
+# 파이프라인 사용
+Write-Output "CPU 사용률이 높은 프로세스:"
+Get-ProcessInfo "*" | 
+    Where-Object { $_.CPU -gt 10 } | 
+    Sort-Object CPU -Descending |
+    ForEach-Object { Write-Output "  $($_.Name): CPU $($_.CPU)%" }
+
+# 4. 재귀 함수
+Write-Output "`n4. 재귀 함수 (팩토리얼)"
+
+function Get-Factorial {
+    param([Int32] $n)
+    
+    if ($n -le 1) {
+        return 1
+    } else {
+        return $n * (Get-Factorial ($n - 1))
+    }
+}
+
+$factorial5 = Get-Factorial 5
+Write-Output "5! = $factorial5"
+
+# 5. 람다식 유사 기능
+Write-Output "`n5. 스크립트 블록"
+
+$multiplyBy2 = { param($x) return $x * 2 }
+$numbers = @(1, 2, 3, 4, 5)
+
+Write-Output "원본 배열: $($numbers -join ', ')"
+$doubled = $numbers | ForEach-Object { & $multiplyBy2 $_ }
+Write-Output "2배한 배열: $($doubled -join ', ')"
+
+# 6. 오류 처리 함수
+Write-Output "`n6. 오류 처리가 있는 함수"
+
+function Safe-Divide {
+    param(
+        [Double] $dividend,
+        [Double] $divisor
+    )
+    
+    try {
+        if ($divisor -eq 0) {
+            throw "0으로 나눌 수 없습니다."
+        }
+        
+        $result = $dividend / $divisor
+        Write-Output "$dividend ÷ $divisor = $result"
+        return $result
+    } catch {
+        Write-Error "나눗셈 오류: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+# 오류 처리 테스트
+Safe-Divide 10 2
+Safe-Divide 10 0
+
+Write-Output "`n=== 함수와 cmdlet 예제 완료 ==="

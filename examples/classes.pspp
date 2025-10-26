@@ -1,0 +1,265 @@
+# PSP 클래스와 객체 지향 프로그래밍 예제
+# 클래스 정의, 상속, 인터페이스 등 OOP 개념
+
+Write-Output "=== PSP 클래스와 OOP 예제 ==="
+
+# 1. 기본 클래스 정의
+Write-Output "`n1. 기본 클래스"
+
+class Person {
+    # 속성 (Properties)
+    [String] $Name
+    [Int32] $Age
+    [String] $Email
+    
+    # 생성자 (Constructor)
+    Person([String] $name, [Int32] $age) {
+        $this.Name = $name
+        $this.Age = $age
+        $this.Email = "$($name.ToLower())@example.com"
+    }
+    
+    # 메서드 (Methods)
+    [String] GetInfo() {
+        return "이름: $($this.Name), 나이: $($this.Age), 이메일: $($this.Email)"
+    }
+    
+    [Boolean] IsAdult() {
+        return $this.Age -ge 18
+    }
+    
+    [Void] HaveBirthday() {
+        $this.Age++
+        Write-Output "$($this.Name)님 생일 축하합니다! 이제 $($this.Age)세입니다."
+    }
+}
+
+# 클래스 사용
+$person1 = [Person]::new("김철수", 25)
+$person2 = [Person]::new("이영희", 17)
+
+Write-Output $person1.GetInfo()
+Write-Output $person2.GetInfo()
+Write-Output "김철수 성인 여부: $($person1.IsAdult())"
+Write-Output "이영희 성인 여부: $($person2.IsAdult())"
+
+$person1.HaveBirthday()
+
+# 2. 상속 (Inheritance)
+Write-Output "`n2. 상속"
+
+class Employee : Person {
+    [String] $Department
+    [Int32] $Salary
+    [String] $Position
+    
+    # 생성자
+    Employee([String] $name, [Int32] $age, [String] $department, [Int32] $salary) : base($name, $age) {
+        $this.Department = $department
+        $this.Salary = $salary
+        $this.Position = "사원"
+    }
+    
+    # 메서드 오버라이드
+    [String] GetInfo() {
+        $baseInfo = ([Person]$this).GetInfo()
+        return "$baseInfo, 부서: $($this.Department), 급여: $($this.Salary)만원"
+    }
+    
+    # 새로운 메서드
+    [Void] Promote([String] $newPosition, [Int32] $salaryIncrease) {
+        $this.Position = $newPosition
+        $this.Salary += $salaryIncrease
+        Write-Output "$($this.Name)님이 $newPosition(으)로 승진했습니다! 급여: $($this.Salary)만원"
+    }
+    
+    [Double] GetAnnualSalary() {
+        return $this.Salary * 12
+    }
+}
+
+# 상속 클래스 사용
+$employee = [Employee]::new("박민수", 28, "IT", 3000)
+Write-Output $employee.GetInfo()
+Write-Output "연봉: $($employee.GetAnnualSalary())만원"
+
+$employee.Promote("선임", 500)
+
+# 3. 추상 클래스와 다형성
+Write-Output "`n3. 추상 클래스와 다형성"
+
+# 추상 클래스 (Vehicle)
+class Vehicle {
+    [String] $Brand
+    [String] $Model
+    [Int32] $Year
+    
+    Vehicle([String] $brand, [String] $model, [Int32] $year) {
+        $this.Brand = $brand
+        $this.Model = $model
+        $this.Year = $year
+    }
+    
+    # 가상 메서드 (파생 클래스에서 오버라이드 예정)
+    [String] GetVehicleType() {
+        return "일반 차량"
+    }
+    
+    [String] GetInfo() {
+        return "$($this.Year) $($this.Brand) $($this.Model) ($($this.GetVehicleType()))"
+    }
+    
+    [Void] Start() {
+        Write-Output "$($this.Brand) $($this.Model) 시동을 걸었습니다."
+    }
+}
+
+# 파생 클래스들
+class Car : Vehicle {
+    [Int32] $Doors
+    
+    Car([String] $brand, [String] $model, [Int32] $year, [Int32] $doors) : base($brand, $model, $year) {
+        $this.Doors = $doors
+    }
+    
+    [String] GetVehicleType() {
+        return "승용차"
+    }
+    
+    [Void] Honk() {
+        Write-Output "빵빵!"
+    }
+}
+
+class Motorcycle : Vehicle {
+    [Boolean] $HasSidecar
+    
+    Motorcycle([String] $brand, [String] $model, [Int32] $year, [Boolean] $hasSidecar) : base($brand, $model, $year) {
+        $this.HasSidecar = $hasSidecar
+    }
+    
+    [String] GetVehicleType() {
+        return "오토바이"
+    }
+    
+    [Void] Wheelie() {
+        Write-Output "앞바퀴 들기!"
+    }
+}
+
+# 다형성 테스트
+$vehicles = @(
+    [Car]::new("현대", "소나타", 2023, 4),
+    [Motorcycle]::new("야마하", "R1", 2022, $false),
+    [Car]::new("기아", "K5", 2023, 4)
+)
+
+Write-Output "차량 목록:"
+foreach ($vehicle in $vehicles) {
+    Write-Output "  $($vehicle.GetInfo())"
+    $vehicle.Start()
+}
+
+# 4. 정적 메서드와 속성
+Write-Output "`n4. 정적 메서드와 속성"
+
+class MathUtility {
+    # 정적 속성
+    static [Double] $PI = 3.14159265359
+    
+    # 정적 메서드
+    static [Double] CalculateCircleArea([Double] $radius) {
+        return [MathUtility]::PI * $radius * $radius
+    }
+    
+    static [Double] CalculateDistance([Double] $x1, [Double] $y1, [Double] $x2, [Double] $y2) {
+        return [Math]::Sqrt([Math]::Pow(($x2 - $x1), 2) + [Math]::Pow(($y2 - $y1), 2))
+    }
+    
+    static [Boolean] IsPrime([Int32] $number) {
+        if ($number -lt 2) { return $false }
+        for ($i = 2; $i -lt $number; $i++) {
+            if ($number % $i -eq 0) { return $false }
+        }
+        return $true
+    }
+}
+
+# 정적 메서드 사용
+$radius = 5
+$area = [MathUtility]::CalculateCircleArea($radius)
+Write-Output "반지름 $radius 인 원의 넓이: $([Math]::Round($area, 2))"
+
+$distance = [MathUtility]::CalculateDistance(0, 0, 3, 4)
+Write-Output "점 (0,0)과 (3,4) 사이의 거리: $distance"
+
+$number = 17
+$isPrime = [MathUtility]::IsPrime($number)
+Write-Output "$number 는 소수입니까? $isPrime"
+
+# 5. 컬렉션 클래스
+Write-Output "`n5. 컬렉션 클래스"
+
+class SecurityEvent {
+    [DateTime] $Timestamp
+    [String] $EventType
+    [String] $Source
+    [String] $Description
+    [String] $Severity
+    
+    SecurityEvent([String] $eventType, [String] $source, [String] $description, [String] $severity) {
+        $this.Timestamp = Get-Date
+        $this.EventType = $eventType
+        $this.Source = $source
+        $this.Description = $description
+        $this.Severity = $severity
+    }
+    
+    [String] ToString() {
+        return "[$($this.Timestamp.ToString('yyyy-MM-dd HH:mm:ss'))] $($this.Severity): $($this.EventType) from $($this.Source) - $($this.Description)"
+    }
+}
+
+class SecurityLogger {
+    [Array] $Events
+    
+    SecurityLogger() {
+        $this.Events = @()
+    }
+    
+    [Void] LogEvent([String] $eventType, [String] $source, [String] $description, [String] $severity) {
+        $event = [SecurityEvent]::new($eventType, $source, $description, $severity)
+        $this.Events += $event
+        Write-Output "이벤트 로깅: $($event.ToString())"
+    }
+    
+    [Array] GetEventsByType([String] $eventType) {
+        return $this.Events | Where-Object { $_.EventType -eq $eventType }
+    }
+    
+    [Array] GetEventsBySeverity([String] $severity) {
+        return $this.Events | Where-Object { $_.Severity -eq $severity }
+    }
+    
+    [Int32] GetEventCount() {
+        return $this.Events.Count
+    }
+}
+
+# 보안 로거 사용
+$logger = [SecurityLogger]::new()
+
+$logger.LogEvent("Login", "192.168.1.100", "사용자 로그인 성공", "INFO")
+$logger.LogEvent("PortScan", "192.168.1.50", "포트 스캔 감지", "WARNING")
+$logger.LogEvent("AuthFailure", "192.168.1.200", "로그인 실패 (3회)", "ERROR")
+$logger.LogEvent("Login", "192.168.1.105", "관리자 로그인", "INFO")
+
+Write-Output "`n총 이벤트 수: $($logger.GetEventCount())"
+
+$warningEvents = $logger.GetEventsBySeverity("WARNING")
+Write-Output "경고 이벤트: $($warningEvents.Count)개"
+
+$loginEvents = $logger.GetEventsByType("Login")
+Write-Output "로그인 이벤트: $($loginEvents.Count)개"
+
+Write-Output "`n=== 클래스와 OOP 예제 완료 ==="

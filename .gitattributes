@@ -1,4 +1,13 @@
-# GitHub Linguist 설정
-# .pspp 파일을 PSP 언어로 인식하도록 설정
-
+# GitHub Linguist 설정 - PSP 언어 인식
 *.pspp linguist-language=PSP
+*.pspp linguist-detectable=true
+
+# 문서 파일
+*.md linguist-documentation=true
+docs/* linguist-documentation=true
+
+# 예제 파일은 언어 통계에 포함
+examples/*.pspp linguist-documentation=false
+
+# VS Code 확장프로그램은 vendor 파일로 분류
+vscode-extension/* linguist-vendored=true
