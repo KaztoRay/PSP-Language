@@ -239,46 +239,6 @@ PSP 언어를 더 편리하게 사용하려면 VS Code 확장프로그램을 설
 - 보안 도구 개발
 - 침투 테스트
 
-## 🤝 기여
-
-PSP 언어 발전에 기여해주세요!
-
-1. 저장소를 포크합니다
-2. 새로운 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'Add amazing feature'`)
-4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`)
-5. Pull Request를 생성합니다
-
-### 기여 방법
-
-- 🐛 **버그 리포트**: [이슈 생성](https://github.com/psp-team/PSP-Language/issues)
-- 💡 **기능 제안**: [기능 요청](https://github.com/psp-team/PSP-Language/issues)
-- 📖 **문서 개선**: 문서 수정 및 번역
-- 🔧 **코드 기여**: 새로운 기능 추가 및 버그 수정
-
 ## 📄 라이선스
 
 이 프로젝트는 [MIT 라이선스](LICENSE) 하에 배포됩니다.
-
-## 🔗 관련 링크
-
-- [공식 웹사이트](https://psp-lang.org) (예정)
-- [문서 사이트](https://docs.psp-lang.org) (예정)
-- [GitHub 저장소](https://github.com/psp-team/PSP-Language)
-- [디스코드 커뮤니티](https://discord.gg/psp-lang) (예정)
-
-## 💬 커뮤니티
-
-- 💬 [디스코드](https://discord.gg/psp-lang) - 실시간 채팅
-- 📧 [이메일](mailto:contact@psp-lang.org) - 공식 연락처
-- 🐦 [트위터](https://twitter.com/psp_lang) - 최신 소식
-
----
-
-<div align="center">
-
-**PSP로 더 안전한 디지털 세상을 만들어가세요! 🛡️**
-
-Made with ❤️ by the PSP Development Team
-
-</div>
